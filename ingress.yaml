@@ -1,0 +1,36 @@
+apiVersion: "extensions/v1beta1"
+kind: "Ingress"
+metadata:
+  name: "storagerent-ingress"
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /messages
+        pathType: Prefix
+        backend:
+          serviceName: message
+          servicePort: 8080
+      - path: /payments
+        pathType: Prefix
+        backend:
+          serviceName: payment
+          servicePort: 8080
+      - path: /reservations
+        pathType: Prefix
+        backend:
+          serviceName: reservation
+          servicePort: 8080
+      - path: /storages
+        pathType: Prefix
+        backend:
+          serviceName: storage
+          servicePort: 8080
+      - path: /viewpages
+        pathType: Prefix
+        backend:
+          serviceName: viewpage
+          servicePort: 8080
+      
