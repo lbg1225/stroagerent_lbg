@@ -2,7 +2,9 @@ package storagerent;
 
 import javax.persistence.*;
 import org.springframework.beans.BeanUtils;
+import lombok.Data;
 
+@Data
 @Entity
 @Table(name="Storage_table")
 public class Storage {
@@ -53,52 +55,4 @@ public class Storage {
         BeanUtils.copyProperties(this, storageDeleted);
         storageDeleted.publishAfterCommit();
     }
-
-
-    public Long getStorageId() {
-        return storageId;
-    }
-
-    public void setStorageId(Long storageId) {
-        this.storageId = storageId;
-    }
-    public String getStorageStatus() {
-        return storageStatus;
-    }
-
-    public void setStorageStatus(String storageStatus) {
-        this.storageStatus = storageStatus;
-    }
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-    public Long getReviewCnt() {
-        return reviewCnt;
-    }
-
-    public void setReviewCnt(Long reviewCnt) {
-        this.reviewCnt = reviewCnt;
-    }
-    public String getLastAction() {
-        return lastAction;
-    }
-
-    public void setLastAction(String lastAction) {
-        this.lastAction = lastAction;
-    }
-    public Float getPrice() {
-        return price;
-    }
-
-    public void setPrice(Float price) {
-        this.price = price;
-    }
-
-
-
-
 }

@@ -2,7 +2,9 @@ package storagerent;
 
 import javax.persistence.*;
 import org.springframework.beans.BeanUtils;
+import lombok.Data;
 
+@Data
 @Entity
 @Table(name="Review_table")
 public class Review {
@@ -37,40 +39,5 @@ public class Review {
         ReviewDeleted reviewDeleted = new ReviewDeleted();
         BeanUtils.copyProperties(this, reviewDeleted);
         reviewDeleted.publishAfterCommit();
-
-
     }
-
-    public Long getReviewId() {
-        return reviewId;
-    }
-
-    public void setReviewId(Long reviewId) {
-        this.reviewId = reviewId;
-    }
-    public Long getStorageId() {
-        return storageId;
-    }
-
-    public void setStorageId(Long storageId) {
-        this.storageId = storageId;
-    }
-    public Integer getRate() {
-        return rate;
-    }
-
-    public void setRate(Integer rate) {
-        this.rate = rate;
-    }
-    public String getContent() {
-        return content;
-    }
-
-    public void setContent(String content) {
-        this.content = content;
-    }
-
-
-
-
 }
