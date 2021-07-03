@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: gateway
+  namespace: storagerent
   labels:
     app: gateway
 spec:
@@ -24,6 +25,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: gateway
+  namespace: storagerent
   labels:
     app: gateway
 spec:
@@ -39,10 +41,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: message
+  namespace: storagerent
   labels:
     app: message
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: message
@@ -77,6 +80,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: message
+  namespace: storagerent
   labels:
     app: message
 spec:
@@ -90,10 +94,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: payment
+  namespace: storagerent
   labels:
     app: payment
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: payment
@@ -129,6 +134,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: payment
+  namespace: storagerent
   labels:
     app: payment
 spec:
@@ -142,10 +148,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: reservation
+  namespace: storagerent
   labels:
     app: reservation
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: reservation
@@ -181,6 +188,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: reservation
+  namespace: storagerent
   labels:
     app: reservation
 spec:
@@ -194,10 +202,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: storage
+  namespace: storagerent
   labels:
     app: storage
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: storage
@@ -233,6 +242,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: storage
+  namespace: storagerent
   labels:
     app: storage
 spec:
@@ -246,10 +256,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: viewpage
+  namespace: storagerent
   labels:
     app: viewpage
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: viewpage
@@ -285,6 +296,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: viewpage
+  namespace: storagerent
   labels:
     app: viewpage
 spec:
