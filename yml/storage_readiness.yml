@@ -26,6 +26,9 @@ spec:
             requests:
               cpu: 1000m
           readinessProbe:
+            httpGet:
+              path: '/actuator/health'
+              port: 8080
             initialDelaySeconds: 10
             timeoutSeconds: 2
             periodSeconds: 5
