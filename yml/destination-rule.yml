@@ -8,8 +8,8 @@ spec:
   trafficPolicy:
     connectionPool:
       http:
-        http1MaxPendingRequests: 2
-        maxRequestsPerConnection: 2
+        http1MaxPendingRequests: 1
+        maxRequestsPerConnection: 1
 #   outlierDection:
 #     interval: 1s
 #     consecutiveErrors: 1
