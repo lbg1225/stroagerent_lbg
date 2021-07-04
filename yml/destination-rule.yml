@@ -1,0 +1,17 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: dr-storage
+  namespace: storagerent
+spec:
+  host: storage
+  trafficPolicy:
+    connectionPool:
+      http:
+        http1MaxPendingRequests: 2
+        maxRequestsPerConnection: 2
+#   outlierDection:
+#     interval: 1s
+#     consecutiveErrors: 1
+#     baseEjectionTime: 10s
+#     mexEjectionTime: 100   

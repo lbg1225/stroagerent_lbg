@@ -2,6 +2,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: siege
+  namespace: storagerent
 spec:
   containers:
   - name: siege

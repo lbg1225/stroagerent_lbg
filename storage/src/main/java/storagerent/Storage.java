@@ -1,5 +1,7 @@
 package storagerent;
 
+import java.lang.*;
+
 import javax.persistence.*;
 import org.springframework.beans.BeanUtils;
 import lombok.Data;
@@ -20,6 +22,12 @@ public class Storage {
 
     @PostPersist
     public void onPostPersist(){
+        try {
+            Thread.currentThread().sleep((long) (800 + Math.random() * 220));
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    
         StorageRegistered storageRegistered = new StorageRegistered();
         BeanUtils.copyProperties(this, storageRegistered);
         storageRegistered.publishAfterCommit();
