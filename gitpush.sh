@@ -10,8 +10,10 @@ do
     then
         git commit -m "..$1.."
         git push origin main
+        exit
     elif [[ $var == "N" || $var == "n" ]]
     then
         echo 작업취소
+        exit
     fi
 done
