@@ -186,7 +186,7 @@ spec:
                 configMapKeyRef:
                   name: storagerent-config
                   key: prop.storage.url
-  	        - name: prop.storage.url
+  	        - name: prop.payment.url
               valueFrom:
                 configMapKeyRef:
                   name: storagerent-config
