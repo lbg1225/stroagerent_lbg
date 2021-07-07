@@ -36,7 +36,7 @@ public class StorageController {
                     produces = "application/json;charset=UTF-8")
 
     public boolean chkAndReqReserve(HttpServletRequest request, HttpServletResponse response) throws Exception {
-        /* For CB 
+        /* For CB
         try {
             Thread.currentThread().sleep((long) (800 + Math.random() * 220));
         } catch (InterruptedException e) {

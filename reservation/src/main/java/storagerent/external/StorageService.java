@@ -6,8 +6,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
-@FeignClient(name="Storage", url="${prop.storage.url}", fallback = StorageFallback.class)   // For CB Fall Back 
-// @FeignClient(name="Storage", url="${prop.storage.url}")
+// @FeignClient(name="Storage", url="${prop.storage.url}", fallback=StorageFallback.class)   // For CB Fall Back 
+@FeignClient(name="Storage", url="${prop.storage.url}")
 public interface StorageService {
 
     @RequestMapping(method=RequestMethod.GET, path="/check/chkAndReqReserve")

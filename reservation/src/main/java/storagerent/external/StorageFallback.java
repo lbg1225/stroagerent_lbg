@@ -3,7 +3,8 @@ package storagerent.external;
 
 import java.text.SimpleDateFormat;
 
-public class StorageFallback{
+public class StorageFallback  implements StorageService{
+    @Override
     public boolean chkAndReqReserve(long storageId)
     {
         SimpleDateFormat format1 = new SimpleDateFormat ( "yyyy년 MM월dd일 HH시mm분ss초");
