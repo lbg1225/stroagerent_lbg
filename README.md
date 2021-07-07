@@ -740,8 +740,31 @@ Message이외  Sevices : h2db사용
 
 ## CI/CD 설정
 
-각 구현체들은 github의 source repository에 구성
-Bash Shell 기반 빌드 및 Docker Image repository ECR 저장
+- 각 구현체들은 github의 source repository에 구성
+```
+$ git pull origin main
+Username for 'https://github.com': lbg1225
+Password for 'https://lbg1225@github.com':
+remote: Enumerating objects: 43, done.
+remote: Counting objects: 100% (43/43), done.
+remote: Compressing objects: 100% (9/9), done.
+remote: Total 25 (delta 13), reused 22 (delta 11), pack-reused 0
+Unpacking objects: 100% (25/25), 3.99 KiB | 291.00 KiB/s, done.
+From https://github.com/lbg1225/stroagerent_lbg
+ * branch            main       -> FETCH_HEAD
+   d775eed..6435c9e  main       -> origin/main
+Updating d775eed..6435c9e
+Fast-forward
+ README.md                                                           | 107 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-----------------------------------------
+ build.sh                                                            |  23 +++++++++++++++--------
+ reservation/pom.xml                                                 |   6 ------
+ reservation/src/main/java/storagerent/external/StorageFallback.java |   3 ++-
+ reservation/src/main/java/storagerent/external/StorageService.java  |   4 ++--
+ reservation/src/main/resources/application.yml                      |  18 ++++++++++--------
+ storage/src/main/java/storagerent/StorageController.java            |   2 +-
+ 7 files changed, 96 insertions(+), 67 deletions(-)
+```
+- Bash Shell 기반 빌드 및 Docker Image repository ECR 저장
 ```
 # build.sh
 #!/bin/bash
@@ -778,8 +801,7 @@ else                                          #-- 전체 패키지 생성
     done
 fi
 ```
-
-Shell기반 yaml통한 Code Deploy
+- Shell기반 yaml통한 Code Deploy
 ```
 # kubedeploy.sh
 #!/bin/bash
@@ -808,9 +830,11 @@ spec:
      :
   -- 이항 생략 --
 ```
+![image](https://user-images.githubusercontent.com/78999418/124761406-ba4cf600-df6c-11eb-9e81-6eefe62673d3.png)
+
 ## 동기식 호출 / 서킷 브레이킹 / 장애격리
 
-* 서킷 브레이킹: Hystrix 사용하여 구현함
+* 서킷 브레이킹: istio 사용하여 구현함
 
 시나리오는 예약(reservation)--> 창고(storage) 시의 연결을 RESTful Request/Response 로 연동하여 구현이 되어있고, 예약 요청이 과도할 경우 CB 를 통하여 장애격리.
 
@@ -835,7 +859,7 @@ spec:
 #      consecutiveErrors: 1
 #      baseEjectionTime: 10s
 #      maxEjectionPercent: 100
-```
+
 
 
 * 부하테스터 siege 툴을 통한 서킷 브레이커 동작 확인:
