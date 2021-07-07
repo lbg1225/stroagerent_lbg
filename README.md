@@ -833,13 +833,27 @@ spec:
 ![image](https://user-images.githubusercontent.com/78999418/124761406-ba4cf600-df6c-11eb-9e81-6eefe62673d3.png)
 
 ## 동기식 호출 / 서킷 브레이킹 / 장애격리
-
-* 서킷 브레이킹: istio 사용하여 구현함
-
-시나리오는 예약(reservation)--> 창고(storage) 시의 연결을 RESTful Request/Response 로 연동하여 구현이 되어있고, 예약 요청이 과도할 경우 CB 를 통하여 장애격리.
-
-- DestinationRule 를 생성하여 circuit break 가 발생할 수 있도록 설정
-최소 connection pool 설정
+서킷 브레이킹 istio-injection + DestinationRule
+- istio-injection 적용
+```
+kubectl label namespace storagerent istio-injection=enabled
+```
+- 부하테스터 siege 툴을 통한 서킷 브레이커 동작 확인:
+- 동시사용자 100명
+- 60초 동안 실시
+```
+$siege -c100 -t60S -r10  -v http://a67fdf8668e5d4b518f8ac2a62bd4b45-334568913.us-east-2.elb.amazonaws.com:8080/hospitals 
+HTTP/1.1 200   0.02 secs:    5650 bytes ==> GET  /hospitals
+HTTP/1.1 200   0.01 secs:    5650 bytes ==> GET  /hospitals
+HTTP/1.1 200   0.02 secs:    5650 bytes ==> GET  /hospitals
+HTTP/1.1 200   0.01 secs:    5650 bytes ==> GET  /hospitals
+HTTP/1.1 200   0.00 secs:    5650 bytes ==> GET  /hospitals
+HTTP/1.1 200   0.02 secs:    5650 bytes ==> GET  /hospitals
+HTTP/1.1 200   0.00 secs:    5650 bytes ==> GET  /hospitals
+HTTP/1.1 200   0.00 secs:    5650 bytes ==> GET  /hospitals
+HTTP/1.1 200   0.01 secs:    5650 bytes ==> GET  /hospitals
+```
+- 서킷 브레이킹을 위한 DestinationRule 적용
 ```
 # destination-rule.yml
 apiVersion: networking.istio.io/v1alpha3
@@ -854,157 +868,169 @@ spec:
       http:
         http1MaxPendingRequests: 1
         maxRequestsPerConnection: 1
-#    outlierDetection:
-#      interval: 1s
-#      consecutiveErrors: 1
-#      baseEjectionTime: 10s
-#      maxEjectionPercent: 100
-
-
-
-* 부하테스터 siege 툴을 통한 서킷 브레이커 동작 확인:
-
-siege 실행
-
-```
-kubectl run siege --image=apexacme/siege-nginx -n storagerent
-kubectl exec -it siege -c siege -n storagerent -- /bin/bash
 ```
 
-- 동시사용자 1로 부하 생성 시 모두 정상
 ```
-siege -c1 -t10S -v --content-type "application/json" 'http://storage:8080/storages POST {"desc": "BigStorage"}'
+$kubectl apply -f destination-rule.yml
 
-** SIEGE 4.0.4
-** Preparing 1 concurrent users for battle.
-The server is now under siege...
-HTTP/1.1 201     0.49 secs:     254 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.05 secs:     254 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     254 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.03 secs:     254 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     254 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     254 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.03 secs:     254 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.03 secs:     254 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.03 secs:     254 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.03 secs:     256 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.03 secs:     256 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     256 bytes ==> POST http://storage:8080/storages
-```
+$siege -c100 -t60S -r10  -v http://a67fdf8668e5d4b518f8ac2a62bd4b45-334568913.us-east-2.elb.amazonaws.com:8080/hospitals 
+HTTP/1.1 200   0.03 secs:    5650 bytes ==> GET  /hospitals
+HTTP/1.1 200   0.04 secs:    5650 bytes ==> GET  /hospitals
+HTTP/1.1 200   0.02 secs:    5650 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.01 secs:      81 bytes ==> GET  /hospitals
+HTTP/1.1 200   0.01 secs:    5650 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.01 secs:      81 bytes ==> GET  /hospitals
+HTTP/1.1 200   0.01 secs:    5650 bytes ==> GET  /hospitals
+HTTP/1.1 200   0.01 secs:    5650 bytes ==> GET  /hospitals
+HTTP/1.1 200   0.01 secs:    5650 bytes ==> GET  /hospitals
+HTTP/1.1 200   0.01 secs:    5650 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.01 secs:      81 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.01 secs:      81 bytes ==> GET  /hospitals
+HTTP/1.1 200   0.02 secs:    5650 bytes ==> GET  /hospitals
+HTTP/1.1 200   0.02 secs:    5650 bytes ==> GET  /hospitals
+HTTP/1.1 200   0.01 secs:    5650 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.01 secs:      81 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.02 secs:      95 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.01 secs:      95 bytes ==> GET  /hospitals
+HTTP/1.1 200   0.03 secs:    5650 bytes ==> GET  /hospitals
+HTTP/1.1 200   0.02 secs:    5650 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.00 secs:      19 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.01 secs:      19 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.00 secs:      19 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.01 secs:      19 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.01 secs:      19 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.01 secs:      19 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.02 secs:      19 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.02 secs:      19 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.01 secs:      19 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.02 secs:      19 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.02 secs:      19 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.02 secs:      19 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.00 secs:      19 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.01 secs:      19 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.00 secs:      19 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.02 secs:      19 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.01 secs:      19 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.00 secs:      19 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.00 secs:      19 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.00 secs:      19 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.00 secs:      19 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.01 secs:      19 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.01 secs:      19 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.01 secs:      19 bytes ==> GET  /hospitals
+HTTP/1.1 503   0.00 secs:      19 bytes ==> GET  /hospitals
 
-- 동시사용자 2로 부하 생성 시 503 에러 168개 발생
-```
-siege -c2 -t10S -v --content-type "application/json" 'http://storage:8080/storages POST {"desc": "Beautiful House3"}'
-
-** SIEGE 4.0.4
-** Preparing 2 concurrent users for battle.
-The server is now under siege...
-HTTP/1.1 201     0.02 secs:     258 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     258 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 503     0.10 secs:      81 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     258 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.04 secs:     258 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.05 secs:     258 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.22 secs:     258 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.08 secs:     258 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.07 secs:     258 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 503     0.01 secs:      81 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     258 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.03 secs:     258 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     258 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     258 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     258 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 503     0.01 secs:      81 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     258 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     258 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     258 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     258 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 503     0.00 secs:      81 bytes ==> POST http://storage:8080/storages
-
-Lifting the server siege...
-Transactions:                   1904 hits
-Availability:                  91.89 %
-Elapsed time:                   9.89 secs
-Data transferred:               0.48 MB
-Response time:                  0.01 secs
-Transaction rate:             192.52 trans/sec
-Throughput:                     0.05 MB/sec
-Concurrency:                    1.98
-Successful transactions:        1904
-Failed transactions:             168
-Longest transaction:            0.03
-Shortest transaction:           0.00
-```
-
-
-- 다시 최소 Connection pool로 부하 다시 정상 확인
-
-```
-** SIEGE 4.0.4
-** Preparing 1 concurrent users for battle.
-The server is now under siege...
-HTTP/1.1 201     0.01 secs:     260 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     260 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     260 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.03 secs:     260 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.00 secs:     260 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.02 secs:     260 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     260 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     260 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     260 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.00 secs:     260 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     260 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     260 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     260 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.00 secs:     260 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     260 bytes ==> POST http://storage:8080/storages
-HTTP/1.1 201     0.01 secs:     260 bytes ==> POST http://storage:8080/storages
-
-:
-:
-
-Lifting the server siege...
-Transactions:                   1139 hits
-Availability:                 100.00 %
-Elapsed time:                   9.19 secs
-Data transferred:               0.28 MB
-Response time:                  0.01 secs
-Transaction rate:             123.94 trans/sec
-Throughput:                     0.03 MB/sec
-Concurrency:                    0.98
-Successful transactions:        1139
-Failed transactions:               0
+Transactions:                    194 hits
+Availability:                  16.68 %
+Elapsed time:                  59.76 secs
+Data transferred:               1.06 MB
+Response time:                  0.03 secs
+Transaction rate:               3.25 trans/sec
+Throughput:                     0.02 MB/sec
+Concurrency:                    0.10
+Successful transactions:         194
+Failed transactions:             969
 Longest transaction:            0.04
 Shortest transaction:           0.00
-
 ```
+- DestinationRule 적용되어 서킷 브레이킹 동작 확인 (kiali 화면)
+<< 캡처화면 >>
 
-- 운영시스템은 죽지 않고 지속적으로 CB 에 의하여 적절히 회로가 열림과 닫힘이 벌어지면서 자원을 보호하고 있음을 보여줌.
-  virtualhost 설정과 동적 Scale out (replica의 자동적 추가,HPA) 을 통하여 시스템을 확장 해주는 후속처리가 필요.
+* DestinationRule 적용 제거 후 다시 부하 발생하여 정상 처리 확인
+```
+kubectl delete -f destination-rule.yml
+```
 
 
 ### 오토스케일 아웃
 앞서 CB 는 시스템을 안정되게 운영할 수 있게 해줬지만 사용자의 요청을 100% 받아들여주지 못했기 때문에 이에 대한 보완책으로 자동화된 확장 기능을 적용하고자 한다. 
 
-- storage deployment.yml 파일에 resources 설정을 추가한다
-![image](https://user-images.githubusercontent.com/84304043/122850814-d6378180-d348-11eb-9cd2-eb0873f1c8d7.png)
+- Metric Server 설치(CPU 사용량 체크를 위해)
+```
+$kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.3.6/components.yaml
+$kubectl get deployment metrics-server -n kube-system
+```
+- Deployment 배포시 resource 설정 적용
+```
+    spec:
+      containers:
+          ...
+          resources:
+            limits:
+              cpu: 500m 
+            requests:
+              cpu: 200m 
+```
+- replica 를 동적으로 늘려주도록 HPA 를 설정한다. 설정은 CPU 사용량이 15프로를 넘어서면 replica 를 10개까지 늘려준다:
+```
+kubectl autoscale deploy hospitalmanage -n skcc-ns --min=1 --max=10 --cpu-percent=15
 
-- storage 서비스에 대한 replica 를 동적으로 늘려주도록 HPA 를 설정한다. 설정은 CPU 사용량이 50프로를 넘어서면 replica 를 10개까지 늘려준다:
-```
-kubectl autoscale deployment storage -n storagerent --cpu-percent=50 --min=1 --max=10
-```
+# 적용 내용
+$kubectl get all -n skcc-ns
+NAME                        TYPE           CLUSTER-IP       EXTERNAL-IP                                                              PORT(S)          AGE
+service/gateway             LoadBalancer   10.100.95.162    a67fdf8668e5d4b518f8ac2a62bd4b45-334568913.us-east-2.elb.amazonaws.com   8080:30387/TCP   19h
+service/hospitalmanage      ClusterIP      10.100.5.64      <none>                                                                   8080/TCP         19h
+service/mypage              ClusterIP      10.100.240.169   <none>                                                                   8080/TCP         19h
+service/reservationmanage   ClusterIP      10.100.232.233   <none>                                                                   8080/TCP         19h
+service/screeningmanage     ClusterIP      10.100.101.120   <none>                                                                   8080/TCP         19h
 
-- 부하를 동시사용자 100명, 1분 동안 걸어준다.
-```
-siege -c100 -t60S -v --content-type "application/json" 'http://storage:8080/storages POST {"desc": "BigStorage"}'
+NAME                                READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/gateway             1/1     1            1           19h
+deployment.apps/hospitalmanage      1/1     1            1           11h
+deployment.apps/mypage              1/1     1            1           19h
+deployment.apps/reservationmanage   1/1     1            1           19h
+deployment.apps/screeningmanage     1/1     1            1           19h
+
+NAME                                           DESIRED   CURRENT   READY   AGE
+replicaset.apps/gateway-5d58bbcb67             1         1         1       19h
+replicaset.apps/gateway-db44fcf75              0         0         0       19h
+replicaset.apps/hospitalmanage-8658bbbb6f      1         1         1       11h
+replicaset.apps/mypage-567c4b57ff              1         1         1       18h
+replicaset.apps/mypage-f5486756b               0         0         0       19h
+replicaset.apps/reservationmanage-6f47749879   0         0         0       18h
+replicaset.apps/reservationmanage-c96669994    1         1         1       18h
+replicaset.apps/reservationmanage-f74d47f65    0         0         0       19h
+replicaset.apps/screeningmanage-56ff67c8cf     0         0         0       18h
+replicaset.apps/screeningmanage-598b5f9767     0         0         0       17h
+replicaset.apps/screeningmanage-645c457774     0         0         0       19h
+replicaset.apps/screeningmanage-6485bb9857     0         0         0       17h
+replicaset.apps/screeningmanage-6865764467     0         0         0       19h
+replicaset.apps/screeningmanage-78984d5dc8     0         0         0       17h
+replicaset.apps/screeningmanage-9498f6bdc      1         1         1       17h
+
+NAME                                                 REFERENCE                   TARGETS         MINPODS   MAXPODS   REPLICAS   AGE
+horizontalpodautoscaler.autoscaling/hospitalmanage   Deployment/hospitalmanage   2%/15%   1         10        0          7s
 ```
 - 오토스케일이 어떻게 되고 있는지 모니터링을 걸어둔다
 ```
 kubectl get deploy storage -w -n storagerent 
 ```
-- 어느정도 시간이 흐른 후 (약 30초) 스케일 아웃이 벌어지는 것을 확인할 수 있다:
+- siege로 워크로드를 1분 동안 걸어준다.
+```
+siege -c100 -t60S -r10  -v --content-type "application/json" 'http://storage:8080/storages POST {"desc": "BigStorage"}'
+```
 
-- siege 의 로그를 보아도 전체적인 성공률이 높아진 것을 확인 할 수 있다. 
+- 어느정도 시간이 흐른 후 (약 30초) 스케일 아웃이 벌어지는 것을 확인할 수 있다(kubectl get deploy storage -w -n storagerent)
+```
+NAME             READY   UP-TO-DATE   AVAILABLE   AGE
+hospitalmanage   1/1     1            1           11h
+hospitalmanage   1/4     1            1           11h
+hospitalmanage   1/4     1            1           11h
+hospitalmanage   1/4     1            1           11h
+hospitalmanage   1/4     4            1           11h
+hospitalmanage   1/5     4            1           11h
+hospitalmanage   1/5     4            1           11h
+hospitalmanage   1/5     4            1           11h
+hospitalmanage   1/5     5            1           11h
+```
+- kubectl get으로 HPA을 확인하면 CPU 사용률이 64%로 증가됐다.
+```
+$kubectl get hpa storage -n storagerent 
+NAME                                                 REFERENCE                   TARGETS   MINPODS   MAXPODS   REPLICAS   AGE
+horizontalpodautoscaler.autoscaling/storage          Deployment/storage          64%/15%   1         10        5          2m54s
+```
+
+- siege 의 로그를 보면 Availability가 100%로 유지된 것을 확인 할 수 있다.
 ```
 Lifting the server siege...
 Transactions:                  15615 hits
@@ -1020,10 +1046,13 @@ Failed transactions:               0
 Longest transaction:            2.55
 Shortest transaction:           0.01
 ```
-
+- HPA 삭제
+```
+$kubectl kubectl delete hpa storage -n storagerent
+```
 ## 무정지 재배포
 
-* 먼저 무정지 재배포가 100% 되는 것인지 확인하기 위해서 Autoscaler 이나 CB 설정을 제거함
+먼저 무정지 재배포가 100% 되는 것인지 확인하기 위해서 Autoscaler, CB 설정을 제거함 Readiness Probe 미설정 시 무정지 재배포 가능여부 확인을 위해 buildspec.yml의 Readiness Probe 설정을 제거함
 
 ```
 kubectl delete destinationrules dr-storage -n storagerent
@@ -1050,7 +1079,7 @@ HTTP/1.1 201     0.01 secs:     260 bytes ==> POST http://storage:8080/storags
 
 - 새버전으로의 배포 시작
 ```
-kubectl set image ...
+./kubedeploy.sh v2
 ```
 
 - seige 의 화면으로 넘어가서 Availability 가 100% 미만으로 떨어졌는지 확인
@@ -1076,32 +1105,31 @@ Shortest transaction:           0.00
 - 배포기간중 Availability 가 평소 100%에서 87% 대로 떨어지는 것을 확인. 원인은 쿠버네티스가 성급하게 새로 올려진 서비스를 READY 상태로 인식하여 서비스 유입을 진행한 것이기 때문. 이를 막기위해 Readiness Probe 를 설정함
 
 ```
-# deployment.yaml 의 readiness probe 의 설정:
-```
-
-![image](https://user-images.githubusercontent.com/84304043/122858339-156bcf80-d355-11eb-9d1a-91da438ac905.png)
-
-
-```
-kubectl apply -f kubernetes/deployment.yml
+# kubedelploy.sh 의 readiness probe 의 설정:
+readinessProbe:
+    httpGet:
+      path: '/actuator/health'
+      port: 8080
+    initialDelaySeconds: 30
+    timeoutSeconds: 2
+    periodSeconds: 5
+    failureThreshold: 10
 ```
 
 - 동일한 시나리오로 재배포 한 후 Availability 확인:
 ```
-Lifting the server siege...
-Transactions:                  27657 hits
+Transactions:                    234 hits
 Availability:                 100.00 %
-Elapsed time:                  59.41 secs
-Data transferred:               6.91 MB
-Response time:                  0.21 secs
-Transaction rate:             465.53 trans/sec
-Throughput:                     0.12 MB/sec
-Concurrency:                   99.60
-Successful transactions:       27657
+Elapsed time:                 119.04 secs
+Data transferred:               0.00 MB
+Response time:                  0.51 secs
+Transaction rate:               1.97 trans/sec
+Throughput:                     0.00 MB/sec
+Concurrency:                    1.00
+Successful transactions:         234
 Failed transactions:               0
-Longest transaction:            1.20
-Shortest transaction:           0.00
-
+Longest transaction:            1.57
+Shortest transaction:           0.41
 ```
 
 배포기간 동안 Availability 가 변화없기 때문에 무정지 재배포가 성공한 것으로 확인됨.
