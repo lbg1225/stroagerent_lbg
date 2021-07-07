@@ -36,9 +36,9 @@ spec:
             - containerPort: 8080
           resources:
             limits:
-              cpu: 500m 
-            requests:
               cpu: 200m 
+            requests:
+              cpu: 100m 
 ---
 apiVersion: v1
 kind: Service
