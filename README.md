@@ -1136,19 +1136,94 @@ Shortest transaction:           0.41
 
 
 # Self-healing (Liveness Probe)
-- storage deployment.yml 파일 수정 
+메모리 과부하를 발생시키는 API를 payment 서비스에 추가하여, 임의로 서비스가 동작하지 않는 상황을 만든다. 그 후 LivenessProbe 설정에 의하여 자동으로 서비스가 재시작되는지 확인한다.
 ```
-콘테이너 실행 후 /tmp/healthy 파일을 만들고 
-90초 후 삭제
-livenessProbe에 'cat /tmp/healthy'으로 검증하도록 함
-```
-![image](https://user-images.githubusercontent.com/84304043/122863309-80210900-d35d-11eb-8e07-8113c4ca6af9.png)
+# (payment) PaymentController.java
 
-- kubectl describe pod storage -n storagerent 실행으로 확인
+@RestController
+public class PaymentController {
+
+    @GetMapping("/callmemleak")
+    public void callMemLeak() {
+    try {
+        this.memLeak();
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+    }
+
+    public void memLeak() throws NoSuchFieldException, ClassNotFoundException, IllegalAccessException {
+        Class unsafeClass = Class.forName("sun.misc.Unsafe");
+        
+        Field f = unsafeClass.getDeclaredField("theUnsafe");
+        f.setAccessible(true);
+        Unsafe unsafe = (Unsafe) f.get(null);
+        System.out.print("4..3..2..1...");
+        try {
+            for(;;)
+            unsafe.allocateMemory(1024*1024);
+        } catch(Error e) {
+            System.out.println("Boom!");
+            e.printStackTrace();
+        }
+    }
+}
 ```
-컨테이너 실행 후 90초 동인은 정상이나 이후 /tmp/healthy 파일이 삭제되어 livenessProbe에서 실패를 리턴하게 됨
-pod 정상 상태 일때 pod 진입하여 /tmp/healthy 파일 생성해주면 정상 상태 유지됨
+- payment 서비스에 Liveness Probe 설정을 추가한 payment_bomb.yaml 생성
+
 ```
+# Liveness Probe 적용
+kubectl apply -f payment_bomb.yaml
+
+# 설정 확인
+kubectl get deploy payment -n bomtada -o yaml
+
+....
+template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: payment
+    spec:
+      containers:
+      - image: 879772956301.dkr.ecr.ap-southeast-1.amazonaws.com/user10-payment:bomb
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 5
+          httpGet:
+            path: /actuator/health
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 120
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 2
+        name: payment
+        ports:
+        - containerPort: 8080
+....
+```
+- 메모리 과부하 발생
+```
+kubectl exec -it siege -n storagerent -- /bin/bash
+
+# 메모리 과부하 API 호출
+http http://payment:8080/callmemleak
+
+# pod 상태 확인
+kubectl get po -w -n storagerent
+
+NAME                       READY   STATUS    RESTARTS   AGE
+claim-956c9b89d-m6jg6      1/1     Running   0          127m
+gateway-78678646b-fgwms    1/1     Running   0          127m
+payment-5b7444449f-mp4kf   1/1     Running   0          9m42s
+review-67b6fb4948-qcqrk    1/1     Running   0          127m
+siege                      1/1     Running   0          128m
+payment-5b7444449f-mp4kf   0/1     OOMKilled   0          10m
+payment-5b7444449f-mp4kf   1/1     Running     1          10m
+```
+- pod 상태 확인을 통해 payment서비스의 RESTARTS 횟수가 증가한 것을 확인할 수 있다.
+
 
 # Config Map/ Persistence Volume
 - Persistence Volume
@@ -1373,9 +1448,9 @@ drwxr-xr-x    1 root     root            17 May 24 15:42 ..
 
 - Config Map
 
-1: cofingmap.yml 파일 생성
+1: configmap.yml 파일 생성
 ```
-kubectl apply -f cofingmap.yml
+kubectl apply -f configmap.yml
 
 
 apiVersion: v1
@@ -1384,9 +1459,9 @@ metadata:
   name: storagerent-config
   namespace: storagerent
 data:
-  # 단일 key-value
-  max_reservation_per_person: "10"
-  ui_properties_file_name: "user-interface.properties"
+  prop:
+    storage.url: http://storage:8080
+    payment.url: http://payment:8080
 ```
 
 2. deployment.yml에 적용하기
@@ -1396,24 +1471,96 @@ kubectl apply -f deployment.yml
 
 
 .......
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment
+  namespace: storagerent
+  labels:
+    app: payment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment
+  template:
+    metadata:
+      labels:
+        app: payment
+    spec:
+      containers:
+        - name: payment
+          image: 739063312398.dkr.ecr.ap-northeast-2.amazonaws.com/payment:v1
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
           env:
-			# cofingmap에 있는 단일 key-value
-            - name: MAX_RESERVATION_PER_PERSION
+            - name: prop.storage.url
               valueFrom:
                 configMapKeyRef:
                   name: storagerent-config
-                  key: max_reservation_per_person
-           - name: UI_PROPERTIES_FILE_NAME
+                  key: prop.storage.url
+	    - name: prop.storage.url
               valueFrom:
                 configMapKeyRef:
                   name: storagerent-config
-                  key: ui_properties_file_name
-          volumeMounts:
-          - mountPath: "/mnt/aws"
-            name: volume
-      volumes:
-        - name: volume
-          persistentVolumeClaim:
-            claimName: aws-efs
+                  key: prop.payment.url
 ```
+- kubectl describe pod/reservation-7fdc457d8d-sx7mr -n storagerent
+```
+Name:         reservation-845df65b9c-5ttxp
+Namespace:    storagerent
+Priority:     0
+Node:         ip-192-168-67-22.ap-northeast-2.compute.internal/192.168.67.22
+Start Time:   Thu, 08 Jul 2021 04:04:46 +0900
+Labels:       app=reservation
+              pod-template-hash=845df65b9c
+Annotations:  kubernetes.io/psp: eks.privileged
+Status:       Running
+IP:           192.168.85.143
+IPs:
+  IP:           192.168.85.143
+Controlled By:  ReplicaSet/reservation-845df65b9c
+Containers:
+  reservation:
+    Container ID:   docker://a32235364de12de6fd85fc21c026c1d05ba36befc888d5246a56bc5abdd5fa7f
+    Image:          739063312398.dkr.ecr.ap-northeast-2.amazonaws.com/reservation:v1
+    Image ID:       docker-pullable://739063312398.dkr.ecr.ap-northeast-2.amazonaws.com/reservation@sha256:01a3f5be82f95ee81aa79fed91a27e4db6a311a0f4f4a4cf4bb733753c596515
+    Port:           8080/TCP
+    Host Port:      0/TCP
+    State:          Running
+      Started:      Thu, 08 Jul 2021 04:06:30 +0900
+    Ready:          True
+    Restart Count:  0
+    Environment:
+      prop.storage.url:  <set to the key 'prop.storage.url' of config map 'storagerent-config'>  Optional: false
+      prop.payment.url:  <set to the key 'prop.payment.url' of config map 'storagerent-config'>  Optional: false
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from default-token-c77x8 (ro)
+Conditions:
+  Type              Status
+  Initialized       True
+  Ready             True
+  ContainersReady   True
+  PodScheduled      True
+Volumes:
+  default-token-c77x8:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  default-token-c77x8
+    Optional:    false
+QoS Class:       BestEffort
+Node-Selectors:  <none>
+Tolerations:     node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                 node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:
+  Type     Reason     Age                   From               Message
+  ----     ------     ----                  ----               -------
+  Normal   Scheduled  3m27s                 default-scheduler  Successfully assigned storagerent/reservation-845df65b9c-5ttxp to ip-192-168-67-22.ap-northeast-2.compute.internal
+  Normal   Pulling    3m26s                 kubelet            Pulling image "739063312398.dkr.ecr.ap-northeast-2.amazonaws.com/reservation:v1"
+  Normal   Pulled     3m22s                 kubelet            Successfully pulled image "739063312398.dkr.ecr.ap-northeast-2.amazonaws.com/reservation:v1"
+  Warning  Failed     117s (x8 over 3m22s)  kubelet            Error: configmap "storagerent-config" not found
+  Normal   Pulled     103s (x8 over 3m21s)  kubelet            Container image "739063312398.dkr.ecr.ap-northeast-2.amazonaws.com/reservation:v1" already present on machine
+  Normal   Created    103s                  kubelet            Created container reservation
+  Normal   Started    103s                  kubelet            Started container reservation
 
+```
