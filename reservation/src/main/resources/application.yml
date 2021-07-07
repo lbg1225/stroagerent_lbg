@@ -69,7 +69,14 @@ spring:
         event-out:
           destination: storagerent
           contentType: application/json
-
+feign:
+  hystrix:
+    enabled: true
+hystrix:
+  command:
+    # 전역설정
+    default:
+      execution.isolation.thread.timeoutInMilliseconds: 610
 prop:
   payment:
     url: http://gateway:8080
