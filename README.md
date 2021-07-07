@@ -834,24 +834,77 @@ spec:
 
 ## 동기식 호출 / 서킷 브레이킹 / 장애격리
 서킷 브레이킹 istio-injection + DestinationRule
+- istio 설치
+```
+curl -L https://istio.io/downloadIstio | ISTIO_VERSION=1.7.1 TARGET_ARCH=x86_64 sh -"(istio v1.7.1은 Kubernetes 1.16이상에서만 동작)"
+cd istio-1.7.1
+export PATH=$PWD/bin:$PATH
+istioctl install --set profile=demo --set hub=gcr.io/istio-release
+"note : there are other profiles for production or performance testing."
+Istio 모니터링 툴(Telemetry Applications) 설치
+vi samples/addons/kiali.yaml
+4라인의
+apiVersion: apiextensions.k8s.io/v1beta1 을
+apiVersion: apiextensions.k8s.io/v1으로 수정
+kubectl apply -f samples/addons
+kiali.yaml 오류발생시, 아래 명령어 실행
+kubectl apply -f https://raw.githubusercontent.com/istio/istio/release-1.7/samples/addons/kiali.yaml
+모니터링(Tracing & Monitoring) 툴 설정
+Monitoring Server - Kiali
+기본 ServiceType 변경 : ClusterIP를 LoadBalancer 로…
+kubectl edit svc kiali -n istio-system
+:%s/ClusterIP/LoadBalancer/g
+:wq!
+모니터링 시스템(kiali) 접속 :
+EXTERNAL-IP:20001 (admin/admin)
+Tracing Server - Jaeger
+
+기본 ServiceType 변경 : ClusterIP를 LoadBalancer 로…
+kubectl edit svc tracing -n istio-system
+:%s/ClusterIP/LoadBalancer/g
+:wq!
+분산추적 시스템(tracing) 접속 : EXTERNAL-IP:80
+설치확인
+kubectl get all -n istio-system
+```
 - istio-injection 적용
 ```
 kubectl label namespace storagerent istio-injection=enabled
 ```
 - 부하테스터 siege 툴을 통한 서킷 브레이커 동작 확인:
-- 동시사용자 100명
-- 60초 동안 실시
+- 동시사용자 50명
+- 20초 동안 실시
 ```
-$siege -c100 -t60S -r10  -v http://a67fdf8668e5d4b518f8ac2a62bd4b45-334568913.us-east-2.elb.amazonaws.com:8080/hospitals 
-HTTP/1.1 200   0.02 secs:    5650 bytes ==> GET  /hospitals
-HTTP/1.1 200   0.01 secs:    5650 bytes ==> GET  /hospitals
-HTTP/1.1 200   0.02 secs:    5650 bytes ==> GET  /hospitals
-HTTP/1.1 200   0.01 secs:    5650 bytes ==> GET  /hospitals
-HTTP/1.1 200   0.00 secs:    5650 bytes ==> GET  /hospitals
-HTTP/1.1 200   0.02 secs:    5650 bytes ==> GET  /hospitals
-HTTP/1.1 200   0.00 secs:    5650 bytes ==> GET  /hospitals
-HTTP/1.1 200   0.00 secs:    5650 bytes ==> GET  /hospitals
-HTTP/1.1 200   0.01 secs:    5650 bytes ==> GET  /hospitals
+root@siege:/# siege -c50 -t20S -v --content-type "application/json" 'http://gateway:8080/storages POST {"desc": "BigStorage"}' 
+
+HTTP/1.1 201     0.10 secs:     283 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 201     0.13 secs:     283 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 201     0.11 secs:     283 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 201     0.34 secs:     283 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 201     0.18 secs:     283 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 201     0.16 secs:     283 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 201     0.13 secs:     283 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 201     0.10 secs:     283 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 201     0.13 secs:     283 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 201     0.19 secs:     283 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 201     0.18 secs:     283 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 201     0.12 secs:     283 bytes ==> POST http://gateway:8080/storages
+
+Lifting the server siege...
+Transactions:                   4272 hits
+Availability:                 100.00 %
+Elapsed time:                  19.73 secs
+Data transferred:               1.15 MB
+Response time:                  0.23 secs
+Transaction rate:             216.52 trans/sec
+Throughput:                     0.06 MB/sec
+Concurrency:                   49.53
+Successful transactions:        4272
+Failed transactions:               0
+Longest transaction:            0.92
+Shortest transaction:           0.02
+
+
 ```
 - 서킷 브레이킹을 위한 DestinationRule 적용
 ```
@@ -873,74 +926,39 @@ spec:
 ```
 $kubectl apply -f destination-rule.yml
 
-$siege -c100 -t60S -r10  -v http://a67fdf8668e5d4b518f8ac2a62bd4b45-334568913.us-east-2.elb.amazonaws.com:8080/hospitals 
-HTTP/1.1 200   0.03 secs:    5650 bytes ==> GET  /hospitals
-HTTP/1.1 200   0.04 secs:    5650 bytes ==> GET  /hospitals
-HTTP/1.1 200   0.02 secs:    5650 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.01 secs:      81 bytes ==> GET  /hospitals
-HTTP/1.1 200   0.01 secs:    5650 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.01 secs:      81 bytes ==> GET  /hospitals
-HTTP/1.1 200   0.01 secs:    5650 bytes ==> GET  /hospitals
-HTTP/1.1 200   0.01 secs:    5650 bytes ==> GET  /hospitals
-HTTP/1.1 200   0.01 secs:    5650 bytes ==> GET  /hospitals
-HTTP/1.1 200   0.01 secs:    5650 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.01 secs:      81 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.01 secs:      81 bytes ==> GET  /hospitals
-HTTP/1.1 200   0.02 secs:    5650 bytes ==> GET  /hospitals
-HTTP/1.1 200   0.02 secs:    5650 bytes ==> GET  /hospitals
-HTTP/1.1 200   0.01 secs:    5650 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.01 secs:      81 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.02 secs:      95 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.01 secs:      95 bytes ==> GET  /hospitals
-HTTP/1.1 200   0.03 secs:    5650 bytes ==> GET  /hospitals
-HTTP/1.1 200   0.02 secs:    5650 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.00 secs:      19 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.01 secs:      19 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.00 secs:      19 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.01 secs:      19 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.01 secs:      19 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.01 secs:      19 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.02 secs:      19 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.02 secs:      19 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.01 secs:      19 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.02 secs:      19 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.02 secs:      19 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.02 secs:      19 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.00 secs:      19 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.01 secs:      19 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.00 secs:      19 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.02 secs:      19 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.01 secs:      19 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.00 secs:      19 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.00 secs:      19 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.00 secs:      19 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.00 secs:      19 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.01 secs:      19 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.01 secs:      19 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.01 secs:      19 bytes ==> GET  /hospitals
-HTTP/1.1 503   0.00 secs:      19 bytes ==> GET  /hospitals
+root@siege:/# siege -c50 -t20S -v --content-type "application/json" 'http://gateway:8080/storages POST {"desc": "BigStorage"}' 
+HTTP/1.1 201     0.42 secs:     283 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 503     0.25 secs:      81 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 201     0.43 secs:     283 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 503     0.27 secs:      81 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 201     0.49 secs:     283 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 201     0.23 secs:     283 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 503     0.26 secs:      81 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 201     0.36 secs:     283 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 503     0.21 secs:      81 bytes ==> POST http://gateway:8080/storages
+HTTP/1.1 503     0.22 secs:      81 bytes ==> POST http://gateway:8080/storages
 
-Transactions:                    194 hits
-Availability:                  16.68 %
-Elapsed time:                  59.76 secs
-Data transferred:               1.06 MB
-Response time:                  0.03 secs
-Transaction rate:               3.25 trans/sec
+Lifting the server siege...
+Transactions:                   1296 hits
+Availability:                  58.04 %
+Elapsed time:                  20.01 secs
+Data transferred:               0.42 MB
+Response time:                  0.77 secs
+Transaction rate:              64.77 trans/sec
 Throughput:                     0.02 MB/sec
-Concurrency:                    0.10
-Successful transactions:         194
-Failed transactions:             969
-Longest transaction:            0.04
-Shortest transaction:           0.00
+Concurrency:                   49.60
+Successful transactions:        1296
+Failed transactions:             937
+Longest transaction:            3.49
+Shortest transaction:           0.03
 ```
 - DestinationRule 적용되어 서킷 브레이킹 동작 확인 (kiali 화면)
-<< 캡처화면 >>
+![image](https://user-images.githubusercontent.com/78999418/124833261-e0988300-dfb8-11eb-8735-2418e01e972d.png)
 
 * DestinationRule 적용 제거 후 다시 부하 발생하여 정상 처리 확인
 ```
 kubectl delete -f destination-rule.yml
 ```
-
 
 ### 오토스케일 아웃
 앞서 CB 는 시스템을 안정되게 운영할 수 있게 해줬지만 사용자의 요청을 100% 받아들여주지 못했기 때문에 이에 대한 보완책으로 자동화된 확장 기능을 적용하고자 한다. 
