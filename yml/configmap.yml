@@ -4,6 +4,5 @@ metadata:
   name: storagerent-config
   namespace: storagerent
 data:
-  prop:
-    storage.url: "http://storage:8080"
-    payment.url: "http://payment:8080"
+  prop.storage.url: http://storage:8080
+  prop.payment.url: http://payment:8080
