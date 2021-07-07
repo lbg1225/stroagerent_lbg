@@ -6,6 +6,12 @@
 ECR=739063312398.dkr.ecr.ap-northeast-2.amazonaws.com
 ver=v1                                        #-- 기본버전은 v1
 
+if [ $# -gt 0 ] 
+then
+    ver=$1                                    #-- 버전정보만 입력시 ./build.sh v2  
+fi
+
+cat <<EOF | kubectl apply -f -
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -47,3 +53,4 @@ spec:
       targetPort: 8080
   selector:
     app: storage
+EOF
