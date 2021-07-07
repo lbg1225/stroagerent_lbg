@@ -31,7 +31,7 @@ spec:
     spec:
       containers:
         - name: storage
-          image: lbg1ECR225/storage:$ver
+          image: $ECR/storage:$ver
           ports:
             - containerPort: 8080
           resources:
