@@ -180,6 +180,7 @@ spec:
           image: $ECR/reservation:$ver
           ports:
             - containerPort: 8080
+          env:
             - name: prop.storage.url
               valueFrom:
                 configMapKeyRef:
