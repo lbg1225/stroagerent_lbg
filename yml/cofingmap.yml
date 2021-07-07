@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: storagerent-config
+  namespace: storagerent
+data:
+  prop:
+    storage.url: http://storage:8080
+    payment.url: http://payment:8080

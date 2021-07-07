@@ -20,6 +20,17 @@ spec:
           image: 740569282574.dkr.ecr.ap-northeast-1.amazonaws.com/reservation:v1
           ports:
             - containerPort: 8080
+          env:
+            - name: prop.storage.url
+              valueFrom:
+                configMapKeyRef:
+                  name: storagerent-config
+                  key: prop.storage.url
+  	        - name: prop.storage.url
+              valueFrom:
+                configMapKeyRef:
+                  name: storagerent-config
+                  key: prop.payment.url
           readinessProbe:
             httpGet:
               path: '/actuator/health'
