@@ -4,7 +4,7 @@ metadata:
   name: dr-storage
   namespace: storagerent
 spec:
-  host: payment
+  host: storage
   trafficPolicy:
     connectionPool:
       http:
