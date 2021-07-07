@@ -1,3 +1,11 @@
+!/bin/bash
+#------------------------------------------------------------------------------------------
+# auto scale 배포 스크립트 Created By 이병관
+#------------------------------------------------------------------------------------------
+#-- ECR정보
+ECR=739063312398.dkr.ecr.ap-northeast-2.amazonaws.com
+ver=v1                                        #-- 기본버전은 v1
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -17,14 +25,14 @@ spec:
     spec:
       containers:
         - name: storage
-          image: lbg1225/storage:v1
+          image: lbg1ECR225/storage:$ver
           ports:
             - containerPort: 8080
           resources:
             limits:
-              cpu: 200m
+              cpu: 500m 
             requests:
-              cpu: 100m
+              cpu: 200m 
 ---
 apiVersion: v1
 kind: Service
