@@ -59,7 +59,7 @@ metadata:
   labels:
     app: message
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: message
@@ -96,7 +96,7 @@ metadata:
   labels:
     app: payment
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: payment
@@ -134,7 +134,7 @@ metadata:
   labels:
     app: reservation
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: reservation
@@ -182,7 +182,7 @@ metadata:
   labels:
     app: storage
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: storage
@@ -219,7 +219,7 @@ metadata:
   labels:
     app: viewpage
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: viewpage
