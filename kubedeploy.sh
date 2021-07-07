@@ -31,7 +31,7 @@ spec:
     spec:
       containers:
         - name: gateway
-          image: 739063312398.dkr.ecr.ap-northeast-2.amazonaws.com/gateway:$ver
+          image: $ECR/gateway:$ver
           ports:
             - containerPort: 8080
 ---
@@ -70,7 +70,7 @@ spec:
     spec:
       containers:
         - name: message
-          image: 739063312398.dkr.ecr.ap-northeast-2.amazonaws.com/message:$ver
+          image: $ECR/message:$ver
           ports:
             - containerPort: 8080
           readinessProbe:
@@ -123,7 +123,7 @@ spec:
     spec:
       containers:
         - name: payment
-          image: 739063312398.dkr.ecr.ap-northeast-2.amazonaws.com/payment:$ver
+          image: $ECR/payment:$ver
           ports:
             - containerPort: 8080
           readinessProbe:
@@ -177,9 +177,19 @@ spec:
     spec:
       containers:
         - name: reservation
-          image: 739063312398.dkr.ecr.ap-northeast-2.amazonaws.com/reservation:$ver
+          image: $ECR/reservation:$ver
           ports:
             - containerPort: 8080
+            - name: prop.storage.url
+              valueFrom:
+                configMapKeyRef:
+                  name: storagerent-config
+                  key: prop.storage.url
+  	        - name: prop.storage.url
+              valueFrom:
+                configMapKeyRef:
+                  name: storagerent-config
+                  key: prop.payment.url
           readinessProbe:
             httpGet:
               path: '/actuator/health'
@@ -231,7 +241,7 @@ spec:
     spec:
       containers:
         - name: storage
-          image: 739063312398.dkr.ecr.ap-northeast-2.amazonaws.com/storage:$ver
+          image: $ECR/storage:$ver
           ports:
             - containerPort: 8080
           readinessProbe:
@@ -285,7 +295,7 @@ spec:
     spec:
       containers:
         - name: viewpage
-          image: 739063312398.dkr.ecr.ap-northeast-2.amazonaws.com/viewpage:$ver
+          image: $ECR/viewpage:$ver
           ports:
             - containerPort: 8080
           readinessProbe:
