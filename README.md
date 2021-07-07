@@ -740,49 +740,74 @@ Message이외  Sevices : h2db사용
 
 ## CI/CD 설정
 
-각 구현체들은 각자의 source repository 에 구성되었고, 사용한 CI/CD는 buildspec.yml을 이용한 AWS codebuild를 사용하였습니다.
-
-- CodeBuild 프로젝트를 생성하고 AWS_ACCOUNT_ID, KUBE_URL, KUBE_TOKEN 환경 변수 세팅을 한다
+각 구현체들은 github의 source repository에 구성
+Bash Shell 기반 빌드 및 Docker Image repository ECR 저장
 ```
-SA 생성
-kubectl apply -f eks-admin-service-account.yml
-```
-![image](https://user-images.githubusercontent.com/84304043/122844500-c154f100-d33c-11eb-9ec0-5eb0fa3540d6.png)
-```
-Role 생성
-kubectl apply -f eks-admin-cluster-role-binding.yml
-```
-![image](https://user-images.githubusercontent.com/84304043/122844538-d6ca1b00-d33c-11eb-818b-5a51404265c1.png)
-```
-Token 확인
-kubectl -n kube-system get secret
-kubectl -n kube-system describe secret $(kubectl -n kube-system get secret | grep eks-admin | awk '{print $1}')
-```
-![image](https://user-images.githubusercontent.com/86210580/122849832-34fbfb80-d347-11eb-9f6d-b1e379b3e1cf.png)
+# build.sh
+#!/bin/bash
+#------------------------------------------------------------------------------------------
+# Build 스크립트 Created By 이병관
+#------------------------------------------------------------------------------------------
 
+#-- ECR정보
+ECR=739063312398.dkr.ecr.ap-northeast-2.amazonaws.com   
+build()
+{
+    cd $1
+    mvn clean                                 #-- Clean
+    mvn compile                               #-- Compile
+    mvn package -B -D maven.test.skip=true    #-- Package Build
+    docker build -t $ECR/$1:$2 .              #-- Docker 이미지 생성
+    docker push $ECR/$1:$2                    #-- Docker 이미지 Push
+    cd ..    
+}
+
+ver=v1                                        #-- 기본버전은 v1
+if [ $# -gt 0 ]                               #-- 버전정보만 입력시 ./build.sh v2                              
+then
+    ver=$1
+fi
+
+if [ $# -gt 1 ]                               #-- 특정 패키지 시 ./build.sh gateway v2
+then
+    build $1 $2
+else                                          #-- 전체 패키지 생성
+    for pkg in `echo gateway message payment reservation storage viewpage`
+    do
+        build $pkg $ver
+    done
+fi
 ```
-buildspec.yml 파일 
-마이크로 서비스 storage의 yml 파일 이용하도록 세팅
+
+Shell기반 yaml통한 Code Deploy
 ```
-![image](https://user-images.githubusercontent.com/84304043/122844673-201a6a80-d33d-11eb-8a52-a0fad02951d9.png)
+# kubedeploy.sh
+#!/bin/bash
+#------------------------------------------------------------------------------------------
+# kubernate 배포 스크립트 Created By 이병관
+#------------------------------------------------------------------------------------------
+#-- ECR정보
+ECR=739063312398.dkr.ecr.ap-northeast-2.amazonaws.com
+ver=v1                                        #-- 기본버전은 v1
 
-- codebuild 실행
+if [ $# -gt 0 ] 
+then
+    ver=$1                                    #-- 버전정보만 입력시 ./build.sh v2  
+fi
+
+cat <<EOF | kubectl apply -f -
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: storagerent
+  labels:
+    app: gateway
+spec:
+  replicas: 1
+     :
+  -- 이항 생략 --
 ```
-codebuild 프로젝트 및 빌드 이력
-```
-![image](https://user-images.githubusercontent.com/84304043/122846416-bdc36900-d340-11eb-9558-cad08d2615f2.png)
-![image](https://user-images.githubusercontent.com/84304043/122861596-a2fdee00-d35a-11eb-9d73-7ff537c9e332.png)
-
-- codebuild 빌드 내역 (Message 서비스 세부)
-
-![image](https://user-images.githubusercontent.com/84304043/122846449-cd42b200-d340-11eb-8a33-aeff63915d61.png)
-
-- codebuild 빌드 내역 (전체 이력 조회)
-
-![image](https://user-images.githubusercontent.com/84304043/122846462-d5025680-d340-11eb-9914-b12b82a74ff5.png)
-
-
-
 ## 동기식 호출 / 서킷 브레이킹 / 장애격리
 
 * 서킷 브레이킹: Hystrix 사용하여 구현함
