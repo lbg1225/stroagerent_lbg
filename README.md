@@ -118,7 +118,9 @@
 
 
 ## TO-BE 조직 (Vertically-Aligned)  
- ![image](https://user-images.githubusercontent.com/86210580/122710096-8e5a2100-d29a-11eb-8eed-be99860c4150.png)
+![image](https://user-images.githubusercontent.com/78999418/124908036-d5c70800-e023-11eb-8f54-1d843d76c177.png)
+
+
 
 
 
@@ -195,8 +197,7 @@
     - 수정된 모델은 모든 요구사항을 커버함.
 
 ### 비기능 요구사항에 대한 검증
-
-![image](https://user-images.githubusercontent.com/84304023/122727848-74c4d380-d2b2-11eb-8e3a-c35d2f672ea9.png)
+![image](https://user-images.githubusercontent.com/78999418/124907001-a06dea80-e022-11eb-8e7d-98b5bf7b43ec.png)
 
 - 마이크로 서비스를 넘나드는 시나리오에 대한 트랜잭션 처리
 - 고객 예약시 결제처리:  결제가 완료되지 않은 예약은 절대 받지 않는다고 결정하여, ACID 트랜잭션 적용. 예약 완료시 사전에 창고 상태를 확인하는 것과 결제처리에 대해서는 Request-Response 방식 처리 (1)
@@ -205,8 +206,8 @@
 
 
 ## 헥사고날 아키텍처 다이어그램 도출
+![image](https://user-images.githubusercontent.com/78999418/124903131-9b0ea100-e01e-11eb-8ad3-028e7a70f801.png)
 
-![image](https://user-images.githubusercontent.com/78999418/124887344-0b61f600-e010-11eb-996b-3297e3ac23ba.png)
 
     - Chris Richardson, MSA Patterns 참고하여 Inbound adaptor와 Outbound adaptor를 구분함
     - 호출관계에서 PubSub 과 Req/Resp 를 구분함
@@ -271,6 +272,10 @@
 		  uri: http://viewpage:8085
 		  predicates:
 		    - Path= /storageviews/**
+		 - id: viewpage
+		  uri: http://cleanups:8086
+		  predicates:
+		    - Path= /cleanups/**   
 	      globalcors:
 		corsConfigurations:
 		  '[/**]':
