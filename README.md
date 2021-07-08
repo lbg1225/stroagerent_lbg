@@ -425,19 +425,24 @@ http GET http://gateway:8080/reservations/1
 ```
 http GET http://gateway:8080/payments/1
 ``` 
-![image](https://user-images.githubusercontent.com/78999418/124891380-e4a5be80-e013-11eb-99b8-4d4b46e93e8f.png)
+![image](https://user-images.githubusercontent.com/78999418/124967279-30ca2080-e05f-11eb-89d1-22c74aa05d61.png)
+
 
 
 ## DDD 의 적용
 
-- 각 서비스내에 도출된 핵심 Aggregate Root 객체를 Entity 로 선언하였다. (예시는 storage 마이크로 서비스). 이때 가능한 현업에서 사용하는 언어 (유비쿼터스 랭귀지)를 그대로 사용하려고 노력했다. 현실에서 발생가능한 이벤트에 의하여 마이크로 서비스들이 상호 작용하기 좋은 모델링으로 구현을 하였다.
+- 각 서비스내에 도출된 핵심 Aggregate Root 객체를 Entity 로 선언하였다. (예시는 storage 마이크로 서비스). 이때 가능한 현업에서 사용하는 언어 (유비쿼터스 랭귀지)를 그대로 사용하려고 노력했다. 현실에서 발생가능한 이벤트에 의하여 마이크로 서비스들이 상호 작용하기 좋은 모델링으로 구현을 하였다. 아울러 개인 프로젝트 수행시 Rombok을 통해 소스을 간략화 하였습니다.
 
 ```
 package storagerent;
 
+import java.lang.*;
+
 import javax.persistence.*;
 import org.springframework.beans.BeanUtils;
+import lombok.Data;
 
+@Data
 @Entity
 @Table(name="Storage_table")
 public class Storage {
@@ -456,6 +461,8 @@ public class Storage {
         StorageRegistered storageRegistered = new StorageRegistered();
         BeanUtils.copyProperties(this, storageRegistered);
         storageRegistered.publishAfterCommit();
+
+
     }
 
     @PostUpdate
@@ -465,16 +472,19 @@ public class Storage {
             BeanUtils.copyProperties(this, storageModified);
             storageModified.publishAfterCommit();
         }
+
         if("reserved".equals(lastAction)) {
             StorageReserved storageReserved = new StorageReserved();
             BeanUtils.copyProperties(this, storageReserved);
             storageReserved.publishAfterCommit();
         }
+
         if("cancelled".equals(lastAction)) {
             StorageCancelled storageCancelled = new StorageCancelled();
             BeanUtils.copyProperties(this, storageCancelled);
             storageCancelled.publishAfterCommit();
         }
+
     }
 
     @PreRemove
@@ -482,42 +492,6 @@ public class Storage {
         StorageDeleted storageDeleted = new StorageDeleted();
         BeanUtils.copyProperties(this, storageDeleted);
         storageDeleted.publishAfterCommit();
-    }
-    public Long getStorageId() {
-        return storageId;
-    }
-    public void setStorageId(Long storageId) {
-        this.storageId = storageId;
-    }
-    public String getStorageStatus() {
-        return storageStatus;
-    }
-    public void setStorageStatus(String storageStatus) {
-        this.storageStatus = storageStatus;
-    }
-    public String getDescription() {
-        return description;
-    }
-    public void setDescription(String description) {
-        this.description = description;
-    }
-    public Long getReviewCnt() {
-        return reviewCnt;
-    }
-    public void setReviewCnt(Long reviewCnt) {
-        this.reviewCnt = reviewCnt;
-    }
-    public String getLastAction() {
-        return lastAction;
-    }
-    public void setLastAction(String lastAction) {
-        this.lastAction = lastAction;
-    }
-    public Float getPrice() {
-        return price;
-    }
-    public void setPrice(Float price) {
-        this.price = price;
     }
 }
 
