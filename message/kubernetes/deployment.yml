@@ -20,6 +20,17 @@ spec:
           image: 740569282574.dkr.ecr.ap-northeast-1.amazonaws.com/message:v1
           ports:
             - containerPort: 8080
+          env:
+            - name: superuser.userId
+              value: some_value                                 
+            - name: _DATASOURCE_ADDRESS
+              value: mysql
+            - name: _DATASOURCE_TABLESPACE
+              value: orderdb
+            - name: _DATASOURCE_USERNAME
+              value: root
+            - name: _DATASOURCE_PASSWORD
+              value: admin            
           readinessProbe:
             httpGet:
               path: '/actuator/health'

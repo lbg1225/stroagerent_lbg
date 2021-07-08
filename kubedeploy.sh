@@ -73,6 +73,17 @@ spec:
           image: $ECR/message:$ver
           ports:
             - containerPort: 8080
+          env:
+            - name: superuser.userId
+              value: some_value                                 
+            - name: _DATASOURCE_ADDRESS
+              value: mysql
+            - name: _DATASOURCE_TABLESPACE
+              value: orderdb
+            - name: _DATASOURCE_USERNAME
+              value: root
+            - name: _DATASOURCE_PASSWORD
+              value: admin
 ---
 apiVersion: v1
 kind: Service
