@@ -730,9 +730,10 @@ Message Sevices : 개발은 hsqldb / 운영은 FCR 환경의 DOCKER 기반 MYSQL
 ```
 ![image](https://user-images.githubusercontent.com/78999418/124892941-44e93000-e015-11eb-8a2b-a0d3b7810995.png)
 ```
-Message이외  Sevices : h2db사용
+Message이외  Sevices : h2db사용( AWS RDS도 연동은 하였으나, Mysql Pod사용으로 대신함 )
 ```
-![image](https://user-images.githubusercontent.com/84304043/122845106-ed24a680-d33d-11eb-9124-aed5d9e7285b.png)
+![image](https://user-images.githubusercontent.com/78999418/124897695-84198000-e019-11eb-82e3-a49fe8aaf816.png)
+
 
 ## Maven 빌드시스템 라이브러리 추가( pom.xml 설정변경 Lombok이용 소스 간소화) 
 ![image](https://user-images.githubusercontent.com/78999418/124893890-1d469780-e016-11eb-8fdb-e650380fe255.png)
