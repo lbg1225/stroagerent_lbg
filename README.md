@@ -521,6 +521,21 @@ http POST http:localhost:8088/reservations storageId=1 price=200000 reservationS
 http GET http://localhost:8088/reservations/1
 
 ```
+```
+## 폴리글랏-퍼시스턴스
+```
+Message Sevices : 개발은 hsqldb / 운영은 FCR 환경의 DOCKER 기반 MYSQL사용 
+```
+![image](https://user-images.githubusercontent.com/78999418/124892941-44e93000-e015-11eb-8a2b-a0d3b7810995.png)
+```
+Message이외  Sevices : h2db사용( AWS RDS도 연동은 하였으나, Mysql Pod사용으로 대신함 )
+```
+![image](https://user-images.githubusercontent.com/78999418/124897695-84198000-e019-11eb-82e3-a49fe8aaf816.png)
+
+
+## Maven 빌드시스템 라이브러리 추가( pom.xml 설정변경 Lombok이용 소스 간소화) 
+![image](https://user-images.githubusercontent.com/78999418/124893890-1d469780-e016-11eb-8fdb-e650380fe255.png)
+
 
 ## 동기식 호출(Sync) 과 Fallback 처리
 
@@ -700,21 +715,6 @@ http POST http://gateway:8080/reservations storageId=5 price=200000 reservationS
 
 # Message 서비스와 상관없이 창고대여 성공여부 확인
 http GET http://gateway:8080/reservations/2
-
-```
-## 폴리그랏 퍼시스턴스 적용
-```
-Message Sevices : 개발은 hsqldb / 운영은 FCR 환경의 DOCKER 기반 MYSQL사용 
-```
-![image](https://user-images.githubusercontent.com/78999418/124892941-44e93000-e015-11eb-8a2b-a0d3b7810995.png)
-```
-Message이외  Sevices : h2db사용( AWS RDS도 연동은 하였으나, Mysql Pod사용으로 대신함 )
-```
-![image](https://user-images.githubusercontent.com/78999418/124897695-84198000-e019-11eb-82e3-a49fe8aaf816.png)
-
-
-## Maven 빌드시스템 라이브러리 추가( pom.xml 설정변경 Lombok이용 소스 간소화) 
-![image](https://user-images.githubusercontent.com/78999418/124893890-1d469780-e016-11eb-8fdb-e650380fe255.png)
 
 
 # 운영
