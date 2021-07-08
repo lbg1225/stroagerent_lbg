@@ -254,7 +254,7 @@
 		- id: payment
 		  uri: http://payment:8081
 		  predicates:
-		    - Path=/payments/** 
+		    - Path=/payments/**, /callmemleak**
 		- id: storage
 		  uri: http://storage:8082
 		  predicates:
@@ -981,43 +981,49 @@ $kubectl get deployment metrics-server -n kube-system
 ```
 - replica 를 동적으로 늘려주도록 HPA 를 설정한다. 설정은 CPU 사용량이 15프로를 넘어서면 replica 를 10개까지 늘려준다:
 ```
-kubectl autoscale deploy hospitalmanage -n skcc-ns --min=1 --max=10 --cpu-percent=15
+kubectl autoscale deploy storage -n storagerent --min=1 --max=10 --cpu-percent=15
 
 # 적용 내용
-$kubectl get all -n skcc-ns
-NAME                        TYPE           CLUSTER-IP       EXTERNAL-IP                                                              PORT(S)          AGE
-service/gateway             LoadBalancer   10.100.95.162    a67fdf8668e5d4b518f8ac2a62bd4b45-334568913.us-east-2.elb.amazonaws.com   8080:30387/TCP   19h
-service/hospitalmanage      ClusterIP      10.100.5.64      <none>                                                                   8080/TCP         19h
-service/mypage              ClusterIP      10.100.240.169   <none>                                                                   8080/TCP         19h
-service/reservationmanage   ClusterIP      10.100.232.233   <none>                                                                   8080/TCP         19h
-service/screeningmanage     ClusterIP      10.100.101.120   <none>                                                                   8080/TCP         19h
+$ kubectl get all -n storagerent
 
-NAME                                READY   UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/gateway             1/1     1            1           19h
-deployment.apps/hospitalmanage      1/1     1            1           11h
-deployment.apps/mypage              1/1     1            1           19h
-deployment.apps/reservationmanage   1/1     1            1           19h
-deployment.apps/screeningmanage     1/1     1            1           19h
+NAME                               READY   STATUS    RESTARTS   AGE
+pod/gateway-85f4b4f4b4-pc7k6       1/1     Running   0          81s
+pod/kafka-pod                      1/1     Running   0          2m26s
+pod/message-6598467fc-5vgn4        1/1     Running   0          81s
+pod/payment-6ddd7dd696-26q6n       1/1     Running   0          81s
+pod/reservation-845df65b9c-gqpgg   1/1     Running   0          81s
+pod/siege                          1/1     Running   0          2m26s
+pod/storage-669454f8bb-9tsz7       1/1     Running   0          43s
+pod/viewpage-5b8f5cbc96-6xwbm      1/1     Running   0          81s
 
-NAME                                           DESIRED   CURRENT   READY   AGE
-replicaset.apps/gateway-5d58bbcb67             1         1         1       19h
-replicaset.apps/gateway-db44fcf75              0         0         0       19h
-replicaset.apps/hospitalmanage-8658bbbb6f      1         1         1       11h
-replicaset.apps/mypage-567c4b57ff              1         1         1       18h
-replicaset.apps/mypage-f5486756b               0         0         0       19h
-replicaset.apps/reservationmanage-6f47749879   0         0         0       18h
-replicaset.apps/reservationmanage-c96669994    1         1         1       18h
-replicaset.apps/reservationmanage-f74d47f65    0         0         0       19h
-replicaset.apps/screeningmanage-56ff67c8cf     0         0         0       18h
-replicaset.apps/screeningmanage-598b5f9767     0         0         0       17h
-replicaset.apps/screeningmanage-645c457774     0         0         0       19h
-replicaset.apps/screeningmanage-6485bb9857     0         0         0       17h
-replicaset.apps/screeningmanage-6865764467     0         0         0       19h
-replicaset.apps/screeningmanage-78984d5dc8     0         0         0       17h
-replicaset.apps/screeningmanage-9498f6bdc      1         1         1       17h
+NAME                  TYPE           CLUSTER-IP       EXTERNAL-IP                                                                    PORT(S)          AGE
+service/gateway       LoadBalancer   10.100.9.23      ab24b05a42a6f419894e79cdc10bf9ee-1815139971.ap-northeast-2.elb.amazonaws.com   8080:30573/TCP   81s
+service/message       ClusterIP      10.100.195.226   <none>                                                                         8080/TCP         81s
+service/payment       ClusterIP      10.100.128.43    <none>                                                                         8080/TCP         81s
+service/reservation   ClusterIP      10.100.141.86    <none>                                                                         8080/TCP         81s
+service/storage       ClusterIP      10.100.146.102   <none>                                                                         8080/TCP         81s
+service/viewpage      ClusterIP      10.100.141.234   <none>                                                                         8080/TCP         81s
 
-NAME                                                 REFERENCE                   TARGETS         MINPODS   MAXPODS   REPLICAS   AGE
-horizontalpodautoscaler.autoscaling/hospitalmanage   Deployment/hospitalmanage   2%/15%   1         10        0          7s
+NAME                          READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/gateway       1/1     1            1           81s
+deployment.apps/message       1/1     1            1           81s
+deployment.apps/payment       1/1     1            1           81s
+deployment.apps/reservation   1/1     1            1           81s
+deployment.apps/storage       1/1     1            1           81s
+deployment.apps/viewpage      1/1     1            1           81s
+
+NAME                                     DESIRED   CURRENT   READY   AGE
+replicaset.apps/gateway-85f4b4f4b4       1         1         1       81s
+replicaset.apps/message-6598467fc        1         1         1       81s
+replicaset.apps/payment-6ddd7dd696       1         1         1       81s
+replicaset.apps/reservation-845df65b9c   1         1         1       81s
+replicaset.apps/storage-5d798575b7       0         0         0       81s
+replicaset.apps/storage-669454f8bb       1         1         1       43s
+replicaset.apps/viewpage-5b8f5cbc96      1         1         1       81s
+
+NAME                                          REFERENCE            TARGETS         MINPODS   MAXPODS   REPLICAS   AGE
+horizontalpodautoscaler.autoscaling/storage   Deployment/storage   <unknown>/15%   1         10        1          25s
+
 ```
 - 오토스케일이 어떻게 되고 있는지 모니터링을 걸어둔다
 ```
@@ -1025,48 +1031,65 @@ kubectl get deploy storage -w -n storagerent
 ```
 - siege로 워크로드를 1분 동안 걸어준다.
 ```
-siege -c100 -t60S -r10  -v --content-type "application/json" 'http://storage:8080/storages POST {"desc": "BigStorage"}'
+siege -c100 -t60S -r10  -v --content-type "application/json" 'http://gateway:8080/storages POST {"desc": "BigStorage"}'
 ```
 
 - 어느정도 시간이 흐른 후 (약 30초) 스케일 아웃이 벌어지는 것을 확인할 수 있다(kubectl get deploy storage -w -n storagerent)
 ```
-NAME             READY   UP-TO-DATE   AVAILABLE   AGE
-hospitalmanage   1/1     1            1           11h
-hospitalmanage   1/4     1            1           11h
-hospitalmanage   1/4     1            1           11h
-hospitalmanage   1/4     1            1           11h
-hospitalmanage   1/4     4            1           11h
-hospitalmanage   1/5     4            1           11h
-hospitalmanage   1/5     4            1           11h
-hospitalmanage   1/5     4            1           11h
-hospitalmanage   1/5     5            1           11h
+NAME      READY   UP-TO-DATE   AVAILABLE   AGE
+storage   1/1     1            1           3s
+storage   2/1     1            2           3s
+storage   1/1     1            1           3s
+storage   1/4     1            1           63s
+storage   1/4     1            1           63s
+storage   1/4     1            1           63s
+storage   1/4     4            1           64s
+storage   2/4     4            2           65s
+storage   3/4     4            3           65s
+storage   4/4     4            4           65s
+storage   4/8     4            4           78s
+storage   4/8     4            4           79s
+storage   4/8     4            4           79s
+storage   4/8     8            4           79s
+storage   5/8     8            5           80s
+storage   6/8     8            6           81s
+storage   7/8     8            7           81s
+storage   8/8     8            8           81s
+storage   8/10    8            8           94s
+storage   8/10    8            8           94s
+storage   8/10    8            8           94s
+storage   8/10    10           8           94s
+storage   9/10    10           9           96s
+storage   10/10   10           10          96s
+
 ```
-- kubectl get으로 HPA을 확인하면 CPU 사용률이 64%로 증가됐다.
+- kubectl get으로 HPA을 확인하면 CPU 사용률이 240%로 증가됐다.
 ```
 $kubectl get hpa storage -n storagerent 
-NAME                                                 REFERENCE                   TARGETS   MINPODS   MAXPODS   REPLICAS   AGE
-horizontalpodautoscaler.autoscaling/storage          Deployment/storage          64%/15%   1         10        5          2m54s
+NAME      REFERENCE            TARGETS    MINPODS   MAXPODS   REPLICAS   AGE
+storage   Deployment/storage   240%/15%   1         10        10         8m43s
 ```
 
 - siege 의 로그를 보면 Availability가 100%로 유지된 것을 확인 할 수 있다.
 ```
 Lifting the server siege...
-Transactions:                  15615 hits
+Transactions:                  15014 hits
 Availability:                 100.00 %
-Elapsed time:                  59.44 secs
-Data transferred:               3.90 MB
-Response time:                  0.32 secs
-Transaction rate:             262.70 trans/sec
+Elapsed time:                  59.50 secs
+Data transferred:               4.03 MB
+Response time:                  0.39 secs
+Transaction rate:             252.34 trans/sec
 Throughput:                     0.07 MB/sec
-Concurrency:                   85.04
-Successful transactions:       15675
+Concurrency:                   97.22
+Successful transactions:       15017
 Failed transactions:               0
-Longest transaction:            2.55
+Longest transaction:            4.44
 Shortest transaction:           0.01
+
 ```
 - HPA 삭제
 ```
-$kubectl kubectl delete hpa storage -n storagerent
+$ kubectl delete hpa storage -n storagerent
 ```
 ## 무정지 재배포
 
@@ -1097,33 +1120,31 @@ HTTP/1.1 201     0.01 secs:     260 bytes ==> POST http://storage:8080/storags
 
 - 새버전으로의 배포 시작
 ```
-./kubedeploy.sh v2
+.$ kubectl set image deploy storage storage=739063312398.dkr.ecr.ap-northeast-2.amazonaws.com/storage:v2 -n storagerent
 ```
 
 - seige 의 화면으로 넘어가서 Availability 가 100% 미만으로 떨어졌는지 확인
 
 ```
-siege -c100 -t60S -r10 -v --content-type "application/json" 'http://storage:8080/storages POST {"desc": "BigStorage"}'
+siege -c100 -t60S -r10 -v --content-type "application/json" 'http://gateway:8080/storages POST {"desc": "BigStorage"}'
 
-
-Transactions:                   7732 hits
-Availability:                  87.32 %
-Elapsed time:                  17.12 secs
-Data transferred:               1.93 MB
-Response time:                  0.18 secs
-Transaction rate:             451.64 trans/sec
-Throughput:                     0.11 MB/sec
-Concurrency:                   81.21
-Successful transactions:        7732
+Transactions:                   2806 hits
+Availability:                  71.42 %
+Elapsed time:                  34.81 secs
+Data transferred:               0.99 MB
+Response time:                  0.90 secs
+Transaction rate:              80.61 trans/sec
+Throughput:                     0.03 MB/sec
+Concurrency:                   72.95
+Successful transactions:        2806
 Failed transactions:            1123
-Longest transaction:            0.94
+Longest transaction:           28.26
 Shortest transaction:           0.00
-
 ```
 - 배포기간중 Availability 가 평소 100%에서 87% 대로 떨어지는 것을 확인. 원인은 쿠버네티스가 성급하게 새로 올려진 서비스를 READY 상태로 인식하여 서비스 유입을 진행한 것이기 때문. 이를 막기위해 Readiness Probe 를 설정함
 
 ```
-# kubedelploy.sh 의 readiness probe 의 설정:
+# kubedelploy.sh 의 readiness probe 의 설정: 
 readinessProbe:
     httpGet:
       path: '/actuator/health'
@@ -1134,20 +1155,23 @@ readinessProbe:
     failureThreshold: 10
 ```
 
-- 동일한 시나리오로 재배포 한 후 Availability 확인:
+- 동일한 시나리오로 재배포 한 후 Availability 확인: kubectl set image deploy storage storage=739063312398.dkr.ecr.ap-northeast-2.amazonaws.com/storage:v1 -n storagerent
 ```
-Transactions:                    234 hits
+root@siege:/# siege -c100 -t60S -r10 -v --content-type "application/json" 'http://gateway:8080/storages POST {"desc": "BigStorage"}'
+
+Lifting the server siege...
+Transactions:                   3237 hits
 Availability:                 100.00 %
-Elapsed time:                 119.04 secs
-Data transferred:               0.00 MB
-Response time:                  0.51 secs
-Transaction rate:               1.97 trans/sec
-Throughput:                     0.00 MB/sec
-Concurrency:                    1.00
-Successful transactions:         234
+Elapsed time:                  59.89 secs
+Data transferred:               0.87 MB
+Response time:                  1.82 secs
+Transaction rate:              54.05 trans/sec
+Throughput:                     0.01 MB/sec
+Concurrency:                   98.54
+Successful transactions:        3237
 Failed transactions:               0
-Longest transaction:            1.57
-Shortest transaction:           0.41
+Longest transaction:           12.86
+Shortest transaction:           0.09
 ```
 
 배포기간 동안 Availability 가 변화없기 때문에 무정지 재배포가 성공한 것으로 확인됨.
@@ -1226,19 +1250,30 @@ template:
 kubectl exec -it siege -n storagerent -- /bin/bash
 
 # 메모리 과부하 API 호출
-http http://payment:8080/callmemleak
+http http://gateway:8080/callmemleak
 
 # pod 상태 확인
-kubectl get po -w -n storagerent
+[ec2-user@ip-172-31-11-26 stroagerent_lbg]$ kubectl get po -w -n storagerent
 
-NAME                       READY   STATUS    RESTARTS   AGE
-claim-956c9b89d-m6jg6      1/1     Running   0          127m
-gateway-78678646b-fgwms    1/1     Running   0          127m
-payment-5b7444449f-mp4kf   1/1     Running   0          9m42s
-review-67b6fb4948-qcqrk    1/1     Running   0          127m
-siege                      1/1     Running   0          128m
-payment-5b7444449f-mp4kf   0/1     OOMKilled   0          10m
-payment-5b7444449f-mp4kf   1/1     Running     1          10m
+NAME                           READY   STATUS    RESTARTS   AGE
+gateway-85f4b4f4b4-6bsst       1/1     Running   0          84s
+kafka-pod                      1/1     Running   0          84m
+message-6598467fc-rk6fk        1/1     Running   0          84s
+payment-6ddd7dd696-kphjl       1/1     Running   1          84s
+payment-85cc5849d5-nlb7q       0/1     Running   0          66s
+reservation-845df65b9c-bfffm   1/1     Running   0          84s
+siege                          1/1     Running   0          84m
+storage-5d798575b7-tsjvw       1/1     Running   0          84s
+viewpage-5b8f5cbc96-nfbn2      1/1     Running   0          84s
+payment-85cc5849d5-nlb7q       1/1     Running   0          84s
+payment-6ddd7dd696-kphjl       1/1     Terminating   1          102s
+payment-6ddd7dd696-kphjl       0/1     Terminating   1          103s
+payment-6ddd7dd696-kphjl       0/1     Terminating   1          104s
+payment-6ddd7dd696-kphjl       0/1     Terminating   1          104s
+payment-85cc5849d5-nlb7q       0/1     OOMKilled     0          2m56s
+payment-85cc5849d5-nlb7q       0/1     Running       1          2m57s
+payment-85cc5849d5-nlb7q       1/1     Running       1          4m18s
+
 ```
 - pod 상태 확인을 통해 payment서비스의 RESTARTS 횟수가 증가한 것을 확인할 수 있다.
 
