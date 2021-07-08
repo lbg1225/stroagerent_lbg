@@ -1,3 +1,12 @@
+ECR=739063312398.dkr.ecr.ap-northeast-2.amazonaws.com
+ver=v1                                        #-- 기본버전은 v1
+
+if [ $# -gt 0 ] 
+then
+    ver=$1                                    #-- 버전정보만 입력시 ./build.sh v2  
+fi
+
+cat <<EOF | kubectl apply -f -
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -17,14 +26,14 @@ spec:
     spec:
       containers:
         - name: storage
-          image: lbg1225/storage:v2
+          image: $ECR/storage:$ver
           ports:
             - containerPort: 8080
           resources:
             limits:
-              cpu: 2000m
+              cpu: 500m 
             requests:
-              cpu: 1000m
+              cpu: 200m 
           readinessProbe:
             httpGet:
               path: '/actuator/health'
@@ -47,3 +56,4 @@ spec:
       targetPort: 8080
   selector:
     app: storage
+EOF
