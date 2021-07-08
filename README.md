@@ -1279,226 +1279,227 @@ payment-85cc5849d5-nlb7q       1/1     Running       1          4m18s
 
 
 # Config Map/ Persistence Volume
-- Persistence Volume
+- Persistence Volume : Mysql Pod을 설치하여 Persistence Volume 과 연계
 
 1: EFS 생성
 ```
-EFS 생성 시 클러스터의 VPC를 선택해야함
+aws efs create-file-system \
+    --performance-mode generalPurpose \
+    --throughput-mode bursting \
+    --tags Key=Name,Value=my-file-system
 ```
-![클러스터의 VPC를 선택해야함](https://user-images.githubusercontent.com/38099203/119364089-85048580-bce9-11eb-8001-1c20a93b8e36.PNG)
+![image](https://user-images.githubusercontent.com/78999418/124878313-ecab3180-e006-11eb-9908-bd2ddd42ddb2.png)
 
-![EFS생성](https://user-images.githubusercontent.com/38099203/119343415-60041880-bcd1-11eb-9c25-1695c858f6aa.PNG)
-
-2. EFS 계정 생성 및 ROLE 바인딩
+2. provisioner 설치 및 StorageClass 등록
 ```
-kubectl apply -f efs-sa.yml
+$ kubectl apply -f efs-provisioner-deploy.yaml
 
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: efs-provisioner
-  namespace: storagerent
-
-
-kubectl get ServiceAccount efs-provisioner -n airbnb
-NAME              SECRETS   AGE
-efs-provisioner   1         9m1s  
-  
-  
-  
-kubectl apply -f efs-rbac.yaml
-
-namespace를 반드시 수정해야함
-
-  
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: efs-provisioner-runner
-  namespace: storagerent
-rules:
-  - apiGroups: [""]
-    resources: ["persistentvolumes"]
-    verbs: ["get", "list", "watch", "create", "delete"]
-  - apiGroups: [""]
-    resources: ["persistentvolumeclaims"]
-    verbs: ["get", "list", "watch", "update"]
-  - apiGroups: ["storage.k8s.io"]
-    resources: ["storageclasses"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["events"]
-    verbs: ["create", "update", "patch"]
----
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: run-efs-provisioner
-  namespace: storagerent
-subjects:
-  - kind: ServiceAccount
-    name: efs-provisioner
-     # replace with namespace where provisioner is deployed
-    namespace: storagerent
-roleRef:
-  kind: ClusterRole
-  name: efs-provisioner-runner
-  apiGroup: rbac.authorization.k8s.io
----
-kind: Role
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: leader-locking-efs-provisioner
-  namespace: storagerent
-rules:
-  - apiGroups: [""]
-    resources: ["endpoints"]
-    verbs: ["get", "list", "watch", "create", "update", "patch"]
----
-kind: RoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: leader-locking-efs-provisioner
-  namespace: storagerent
-subjects:
-  - kind: ServiceAccount
-    name: efs-provisioner
-    # replace with namespace where provisioner is deployed
-    namespace: storagerent
-roleRef:
-  kind: Role
-  name: leader-locking-efs-provisioner
-  apiGroup: rbac.authorization.k8s.io
-
-
-```
-
-3. EFS Provisioner 배포
-```
-kubectl apply -f efs-provisioner-deploy.yml
-
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: efs-provisioner
-  namespace: storagerent
-spec:
-  replicas: 1
-  strategy:
-    type: Recreate
-  selector:
-    matchLabels:
-      app: efs-provisioner
-  template:
-    metadata:
-      labels:
-        app: efs-provisioner
-    spec:
-      serviceAccount: efs-provisioner
-      containers:
-        - name: efs-provisioner
-          image: quay.io/external_storage/efs-provisioner:latest
-          env:
-            - name: FILE_SYSTEM_ID
-              value: fs-562f9c36
-            - name: AWS_REGION
-              value: ap-northeast-2
-            - name: PROVISIONER_NAME
-              value: my-aws.com/aws-efs
-          volumeMounts:
-            - name: pv-volume
-              mountPath: /persistentvolumes
-      volumes:
-        - name: pv-volume
-          nfs:
-            server: fs-562f9c36.efs.ap-northeast-2.amazonaws.com
-            path: /
-
-
-kubectl get Deployment efs-provisioner -n airbnb
-NAME              READY   UP-TO-DATE   AVAILABLE   AGE
-efs-provisioner   1/1     1            1           11m
-
-```
-
-4. 설치한 Provisioner를 storageclass에 등록
-```
-kubectl apply -f efs-storageclass.yml
-
-
-kind: StorageClass
-apiVersion: storage.k8s.io/v1
-metadata:
-  name: aws-efs
-  namespace: storagerent
-provisioner: my-aws.com/aws-efs
-
-
-kubectl get sc aws-efs -n storagerent
+[ec2-user@ip-172-31-11-26 mysql]$ kubectl get sc
 NAME            PROVISIONER             RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-aws-efs         my-aws.com/aws-efs      Delete          Immediate              false                  4s
+aws-efs         my-aws.com/aws-efs      Delete          Immediate              false                  154m
+gp2 (default)   kubernetes.io/aws-ebs   Delete          WaitForFirstConsumer   false                  10h
+```
+3. PVC 생성
+```
+kubectl apply -f mysql-pv-volume.yaml
+
+[ec2-user@ip-172-31-11-26 mysql]$ kubectl get pvc
+NAME             STATUS    VOLUME            CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+aws-efs          Pending                                               aws-efs        159m
+mysql-pv-claim   Bound     mysql-pv-volume   20Gi       RWO            manual         4h
 ```
 
-5. PVC(PersistentVolumeClaim) 생성
+4. mysql pod생성
 ```
-kubectl apply -f volume-pvc.yml
+$ kubectl create -f mysql-pod.yaml
 
+[ec2-user@ip-172-31-11-26 mysql]$ kubectl get pod -n storagerent
+NAME                          READY   STATUS    RESTARTS   AGE
+gateway-7dd648f46b-5kw72      1/1     Running   0          41m
+kafka-pod                     1/1     Running   0          6h43m
+message-5c98c498fb-pfbzx      1/1     Running   0          41m
+mysql                         1/1     Running   0          4h16m
+mysql-57d4c99ff7-bqfzz        1/1     Running   0          37m
+payment-c687bc5f8-b88xw       1/1     Running   0          41m
+reservation-9fb96b7c5-qghr8   1/1     Running   0          41m
+siege                         1/1     Running   0          6h42m
+storage-6f4f6fd5bf-2pvkn      1/1     Running   0          41m
+viewpage-c895fb6c4-dqtc6      1/1     Running   0          59m
+```
+5. Mysql 접속 및 Database, 테이블 생성
+```
+[ec2-user@ip-172-31-11-26 mysql]$ kubectl expose pod mysql --port=3306 -n storagerent
+service/mysql exposed
+[ec2-user@ip-172-31-11-26 mysql]$ kubectl exec mysql -n storagerent -it -- bash
+root@mysql:/#  mysql --user=root --password=$MYSQL_ROOT_PASSWORD
+mysql: [Warning] Using a password on the command line interface can be insecure.
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 9
+Server version: 8.0.25 MySQL Community Server - GPL
 
+Copyright (c) 2000, 2021, Oracle and/or its affiliates.
+
+Oracle is a registered trademark of Oracle Corporation and/or its
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+mysql>     create table message_table (
+    ->        message_id bigint not null,
+    ->         content varchar(255),
+    ->         storage_id bigint,
+    ->         primary key (message_id)
+    ->     )
+    -> ;
+ERROR 1046 (3D000): No database selected
+mysql> use messagedb;
+Database changed
+mysql> create table message_table (        message_id bigint not null,         content varchar(255),         storage_id bigint,         primary key (message_id)     );
+Query OK, 0 rows affected (0.01 sec)
+
+mysql> select * from     create table message_table (
+    ->        message_id bigint not null,
+    ->         content varchar(255),
+    ->         storage_id bigint,
+    ->         primary key (message_id)
+    ->     )^C
+mysql> select * from message_table
+    -> ;
+Empty set (0.01 sec)
+
+mysql> quit
+Bye
+root@mysql:/# exit
+```
+6. 메세지 마이크로 서비스를 쿠버네티스 DNS 체계내에서 접근가능하게 하기 위해 ClusterIP 로 서비스를 생성해준다. 주문 서비스에서 mysql 접근을 위하여 "mysql"이라는 도메인명으로 접근하고 있으므로, 같은 이름으로 서비스를 생성
+```
+kubectl expose pod mysql --port=3306 -n storagerent
+```
+7. DB접속 관련 Secret 객체생성
+```
 apiVersion: v1
-kind: PersistentVolumeClaim
+kind: Secret
 metadata:
-  name: aws-efs
-  namespace: storagerent
-  labels:
-    app: test-pvc
-spec:
-  accessModes:
-  - ReadWriteMany
-  resources:
-    requests:
-      storage: 6Ki
-  storageClassName: aws-efs
-  
-  
-kubectl get pvc aws-efs -n storagerent
-NAME      STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
-aws-efs   Bound    pvc-43f6fe12-b9f3-400c-ba20-b357c1639f00   6Ki        RWX            aws-efs        4m44s
+  name: mysql-pass
+type: Opaque
+data:
+  password: YWRtaW4=     
+"YWRtaW4="는 ‘admin’ 문자열의 BASE64 인코딩된 문자열이다. “echo -n ‘admin’ | base64” 명령을 통해 생성가능하다.
+Secret 객체를 생성한다:
+$ kubectl create -f mysql-secret.yaml
+
+secret/mysql-pass created
+생성된 secret 을 확인한다:
+[ec2-user@ip-172-31-11-26 mysql]$ kubectl get secrets
+NAME                          TYPE                                  DATA   AGE
+default-token-6q9fd           kubernetes.io/service-account-token   3      10h
+efs-provisioner-token-fr69d   kubernetes.io/service-account-token   3      172m
 ```
-
-6. storage pod 적용
+8. 메세지 마이크로 서비스를 통해 데이터 생성 및 조회
 ```
-kubectl apply -f deployment.yml
+root@siege:/# http GET http://gateway:8080/messages/1
+
+HTTP/1.1 200 OK
+Content-Type: application/hal+json;charset=UTF-8
+Date: Thu, 08 Jul 2021 06:47:25 GMT
+transfer-encoding: chunked
+
+{
+    "_links": {
+        "message": {
+            "href": "http://message:8080/messages/1"
+        },
+        "self": {
+            "href": "http://message:8080/messages/1"
+        }
+    },
+    "content": null,
+    "storageId": null
+}
+
+root@siege:/# http post http://gateway:8080/messages content=mysqltest2 storageId=3
+HTTP/1.1 201 Created
+Content-Type: application/json;charset=UTF-8
+Date: Thu, 08 Jul 2021 06:47:50 GMT
+Location: http://message:8080/messages/2
+transfer-encoding: chunked
+
+{
+    "_links": {
+        "message": {
+            "href": "http://message:8080/messages/2"
+        },
+        "self": {
+            "href": "http://message:8080/messages/2"
+        }
+    },
+    "content": "mysqltest2",
+    "storageId": 3
+}
+
+root@siege:/# http GET http://gateway:8080/messages/2
+HTTP/1.1 200 OK
+Content-Type: application/hal+json;charset=UTF-8
+Date: Thu, 08 Jul 2021 06:47:54 GMT
+transfer-encoding: chunked
+
+{
+    "_links": {
+        "message": {
+            "href": "http://message:8080/messages/2"
+        },
+        "self": {
+            "href": "http://message:8080/messages/2"
+        }
+    },
+    "content": "mysqltest2",
+    "storageId": 3
+}
 ```
-![pod with pvc](https://user-images.githubusercontent.com/38099203/119349966-bd9c6300-bcd9-11eb-9f6d-08e4a3ec82f0.PNG)
-
-
-7. A pod에서 마운트된 경로에 파일을 생성하고 B pod에서 파일을 확인함
+9. Mysql Pod 제거 및 재생성 
 ```
-NAME                              READY   STATUS    RESTARTS   AGE
-efs-provisioner-f4f7b5d64-lt7rz   1/1     Running   0          14m
-storage-5df66d6674-n6b7n             1/1     Running   0          109s
-storage-5df66d6674-pl25l             1/1     Running   0          109s
-siege                             1/1     Running   0          2d1h
-
-
-kubectl exec -it pod/storage-5df66d6674-n6b7n storage -n storagerent -- /bin/sh
-/ # cd /mnt/aws
-/mnt/aws # touch intensive_course_work
+[ec2-user@ip-172-31-11-26 mysql]$ kubectl delete -f mysql-pod.yaml
+deployment.apps "mysql" deleted
+[ec2-user@ip-172-31-11-26 mysql]$ kubectl apply -f mysql-pod.yaml
+deployment.apps/mysql created
 ```
-![a pod에서 파일생성](https://user-images.githubusercontent.com/38099203/119372712-9736f180-bcf2-11eb-8e57-1d6e3f4273a5.PNG)
-
+ 10. Mysql접속 데이터 존재여부 확인
 ```
-kubectl exec -it pod/storage-5df66d6674-pl25l storage -n storagerent -- /bin/sh
-/ # cd /mnt/aws
-/mnt/aws # ls -al
-total 8
-drwxrws--x    2 root     2000          6144 May 24 15:44 .
-drwxr-xr-x    1 root     root            17 May 24 15:42 ..
--rw-r--r--    1 root     2000             0 May 24 15:44 intensive_course_work
-```
-![b pod에서 파일생성 확인](https://user-images.githubusercontent.com/38099203/119373196-204e2880-bcf3-11eb-88f0-a1e91a89088a.PNG)
+[ec2-user@ip-172-31-11-26 mysql]$ kubectl exec mysql -n storagerent -it -- bash
+root@mysql:/# mysql --user=root --password=$MYSQL_ROOT_PASSWORD
+mysql: [Warning] Using a password on the command line interface can be insecure.
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 65
+Server version: 8.0.25 MySQL Community Server - GPL
 
+Copyright (c) 2000, 2021, Oracle and/or its affiliates.
 
+Oracle is a registered trademark of Oracle Corporation and/or its
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+mysql> use database messagedb;
+ERROR 1049 (42000): Unknown database 'database'
+mysql> use messagedb;
+Reading table information for completion of table and column names
+You can turn off this feature to get a quicker startup with -A
+
+Database changed
+
+mysql> select * from Message_table;
++-----------+------------+-----------+
+| messageId | content    | storageId |
++-----------+------------+-----------+
+|         1 | NULL       |      NULL |
+|         2 | mysqltest2 |         3 |
++-----------+------------+-----------+
+2 rows in set (0.00 sec)
+
+mysql>
+
+ ```
 - Config Map
 
 1: configmap.yml 파일 생성
