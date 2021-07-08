@@ -50,7 +50,7 @@ spring:
         - id: payment
           uri: http://payment:8080
           predicates:
-            - Path=/payments/** 
+            - Path=/payments/**, /callmemleak/**
         - id: storage
           uri: http://storage:8080
           predicates:
