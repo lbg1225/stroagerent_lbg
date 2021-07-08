@@ -79,7 +79,7 @@ spec:
             - name: _DATASOURCE_ADDRESS
               value: mysql
             - name: _DATASOURCE_TABLESPACE
-              value: orderdb
+              value: messagedb
             - name: _DATASOURCE_USERNAME
               value: root
             - name: _DATASOURCE_PASSWORD
