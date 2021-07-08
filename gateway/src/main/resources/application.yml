@@ -11,7 +11,7 @@ spring:
         - id: payment
           uri: http://localhost:8081
           predicates:
-            - Path=/payments/** 
+            - Path=/payments/**, /callmemleak/**
         - id: storage
           uri: http://localhost:8082
           predicates:
