@@ -206,7 +206,7 @@
 
 ## 헥사고날 아키텍처 다이어그램 도출
 
-![image](https://user-images.githubusercontent.com/84304043/122707112-4d5f0e00-d294-11eb-8157-0b102dfad907.png)
+![image](https://user-images.githubusercontent.com/78999418/124887344-0b61f600-e010-11eb-996b-3297e3ac23ba.png)
 
     - Chris Richardson, MSA Patterns 참고하여 Inbound adaptor와 Outbound adaptor를 구분함
     - 호출관계에서 PubSub 과 Req/Resp 를 구분함
@@ -236,9 +236,9 @@
  
 - 실제로 view 페이지를 조회해 보면 모든 storage에 대한 전반적인 예약 상태, 결제 상태, 리뷰 건수 등의 정보를 종합적으로 알 수 있다
 ```
-   http GET localhost:8088/storageviews
+   http GET http://gateway:8080/storageviews
 ```
-![뷰](https://user-images.githubusercontent.com/84304043/122842865-227ac580-d339-11eb-906e-2873cd375b04.PNG)
+![image](https://user-images.githubusercontent.com/78999418/124894821-f341a500-e016-11eb-857b-e9a9ffb22551.png)
 
 
 ## API 게이트웨이
@@ -377,49 +377,51 @@
 
 - 창고등록
 ```
-http POST http://localhost:8088/storages description="BigStorage" price=200000 storageStatus="available"
-```  
-![image](https://user-images.githubusercontent.com/84304043/122844125-eb59e380-d33b-11eb-9a85-1a892021ca0d.png)
+http POST http://gateway:8080/storages description="BigStorage" price=200000 storageStatus="available"
+```
+![image](https://user-images.githubusercontent.com/78999418/124888326-f6399700-e010-11eb-8df7-9ad60cf2dce4.png)
+
 - 예약등록
 ```
-http POST localhost:8088/reservations storageId=1 price=200000 reservationStatus="reqReserve"
+http POST  http://gateway:8080/reservations storageId=1 price=200000 reservationStatus="reqReserve"
 ```  
-![image](https://user-images.githubusercontent.com/84304043/122843690-0415c980-d33b-11eb-9558-c423faa1bd42.png)
+![image](https://user-images.githubusercontent.com/78999418/124888615-3862d880-e011-11eb-813b-d79f2c54d92b.png)
+
 - 예약 후 - 창고 상태
 ```
-http GET http://localhost:8088/storages/1
+http GET http://gateway:8080/storages/1
 ```  
-![image](https://user-images.githubusercontent.com/84304043/122843724-1d1e7a80-d33b-11eb-8a52-8b7f772df2e3.png)
+![image](https://user-images.githubusercontent.com/78999418/124888893-7c55dd80-e011-11eb-8992-a97733a723a7.png)
 - 예약 후 - 예약 상태
 ```
-http GET http://localhost:8088/reservations/1
+http GET http://gateway:8080/reservations/1
 ```  
-![image](https://user-images.githubusercontent.com/84304043/122843763-31fb0e00-d33b-11eb-83f6-140191ec1a6d.png)
+![image](https://user-images.githubusercontent.com/78999418/124889763-5bda5300-e012-11eb-9602-5e3759a6282c.png)
 - 예약 후 - 결제 상태
 ```
-http GET http://localhost:8088/payments/1
+http GET http://gateway:8080/payments/1
 ``` 
-![image](https://user-images.githubusercontent.com/84304043/122843798-43441a80-d33b-11eb-92c4-160c77f6f3ef.png)
+![image](https://user-images.githubusercontent.com/78999418/124890155-b83d7280-e012-11eb-9bcc-99b6b969b890.png)
 - 예약 취소
 ```
-http PATCH localhost:8088/reservations/1 storageId=1 price=200000 reservationStatus="reqCancel"
+http PATCH http://gateway:8080/reservations/1 storageId=1 price=200000 reservationStatus="reqCancel"
 ``` 
-![image](https://user-images.githubusercontent.com/84304043/122843840-57881780-d33b-11eb-88fe-61d8055ff1e0.png)
+![image](https://user-images.githubusercontent.com/78999418/124890587-25510800-e013-11eb-8d5b-31b47498a97e.png)
 - 예약 취소 후 - 창고 상태
 ```
-http GET http://localhost:8088/storages/1
+http GET http://gateway:8080/storages/1
 ``` 
-![image](https://user-images.githubusercontent.com/84304043/122843892-6ec70500-d33b-11eb-9663-e4c894dff60b.png)
+![image](https://user-images.githubusercontent.com/78999418/124890832-647f5900-e013-11eb-80b2-7302639a1495.png)
 - 예약 취소 후 - 예약 상태
 ```
-http GET http://localhost:8088/reservations/1
+http GET http://gateway:8080/reservations/1
 ``` 
-![image](https://user-images.githubusercontent.com/84304043/122843932-856d5c00-d33b-11eb-88a9-921c14d97ed0.png)
+![image](https://user-images.githubusercontent.com/78999418/124891118-a5776d80-e013-11eb-9a76-88d547bf518a.png)
 - 예약 취소 후 - 결제 상태
 ```
-http GET http://localhost:8088/payments/1
+http GET http://gateway:8080/payments/1
 ``` 
-![image](https://user-images.githubusercontent.com/84304043/122843963-95853b80-d33b-11eb-8e0a-4831fa73a5b4.png)
+![image](https://user-images.githubusercontent.com/78999418/124891380-e4a5be80-e013-11eb-99b8-4d4b46e93e8f.png)
 
 
 ## DDD 의 적용
@@ -623,16 +625,16 @@ public interface StorageService {
 # 결제 (pay) 서비스를 잠시 내려놓음 (ctrl+c)
 
 # 대여창고 등록
-http POST http://localhost:8088/storages description="storage1" price=200000 storageStatus="available"
+http POST http://gateway:8080/storages description="storage1" price=200000 storageStatus="available"
 
 # Payment 서비스 종료 후 창고대여
-http POST localhost:8088/reservations storageId=1 price=200000 reservationStatus="reqReserve"
+http POST http://gateway:8080/reservations storageId=1 price=200000 reservationStatus="reqReserve"
 
 # Payment 서비스 실행 후 창고대여
-http POST localhost:8088/reservations storageId=1 price=200000 reservationStatus="reqReserve"
+http POST http://gateway:8080/reservations storageId=1 price=200000 reservationStatus="reqReserve"
 
 # 창고대여 확인 
-http GET http://localhost:8088/reservations/1  
+http GET http://gateway:8080/reservations/1  
 ```
 
 - 또한 과도한 요청시에 서비스 장애가 도미노 처럼 벌어질 수 있다. (서킷브레이커, 폴백 처리는 운영단계에서 설명한다.)
@@ -713,27 +715,28 @@ package storagerent;
 # 메시지 서비스 (message) 를 잠시 내려놓음 (ctrl+c)
 
 # 대여창고 등록
-http POST http://localhost:8088/storages description="msg1" price=200000 storageStatus="available"
+http POST http://gateway:8080/storages description="msg1" price=200000 storageStatus="available"
 
 # Message 서비스 종료 후 창고대여
-http POST localhost:8088/reservations storageId=5 price=200000 reservationStatus="reqReserve"   
+http POST http://gateway:8080/reservations storageId=5 price=200000 reservationStatus="reqReserve"   
 
 # Message 서비스와 상관없이 창고대여 성공여부 확인
-http GET http://localhost:8088/reservations/2
+http GET http://gateway:8080/reservations/2
 
 ```
 ## 폴리그랏 퍼시스턴스 적용
 ```
-Message Sevices : hsqldb사용
+Message Sevices : 개발은 hsqldb / 운영은 FCR 환경의 DOCKER 기반 MYSQL사용 
 ```
-![image](https://user-images.githubusercontent.com/84304043/122845081-dda55d80-d33d-11eb-8d9f-a4e17735574e.png)
+![image](https://user-images.githubusercontent.com/78999418/124892941-44e93000-e015-11eb-8a2b-a0d3b7810995.png)
 ```
 Message이외  Sevices : h2db사용
 ```
 ![image](https://user-images.githubusercontent.com/84304043/122845106-ed24a680-d33d-11eb-9124-aed5d9e7285b.png)
 
-## Maven 빌드시스템 라이브러리 추가( pom.xml 설정변경 H2DB → HSQLDB) 
-![image](https://user-images.githubusercontent.com/84304043/122845179-0fb6bf80-d33e-11eb-879a-1e6e8964ebb3.png)
+## Maven 빌드시스템 라이브러리 추가( pom.xml 설정변경 Lombok이용 소스 간소화) 
+![image](https://user-images.githubusercontent.com/78999418/124893890-1d469780-e016-11eb-8fdb-e650380fe255.png)
+
 
 # 운영
 
