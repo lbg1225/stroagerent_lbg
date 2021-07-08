@@ -10,23 +10,23 @@ cat <<EOF | kubectl apply -f -
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: storage
+  name: payment
   namespace: storagerent
   labels:
-    app: storage
+    app: payment
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: storage
+      app: payment
   template:
     metadata:
       labels:
-        app: storage
+        app: payment
     spec:
       containers:
-        - name: storage
-          image: lbg1225/storage:v1
+        - name: payment
+          image: $ECR/payment:$ver
           ports:
             - containerPort: 8080
           resources:
@@ -43,20 +43,20 @@ spec:
             periodSeconds: 5
             failureThreshold: 10              
           livenessProbe:
-            exec:
-              command:
-              - cat
-              - /tmp/healthy
-            initialDelaySeconds: 90
-            timeoutSeconds: 2
-            periodSeconds: 5
             failureThreshold: 5
+            httpGet:
+              path: /actuator/health
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 120
+            periodSeconds: 5
             successThreshold: 1
+            timeoutSeconds: 2
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: storage
+  name: payment
   namespace: storagerent
   labels:
     app: storage
@@ -65,5 +65,5 @@ spec:
     - port: 8080
       targetPort: 8080
   selector:
-    app: storage
+    app: payment
 EOF

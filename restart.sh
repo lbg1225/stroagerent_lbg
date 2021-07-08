@@ -12,4 +12,5 @@ kubectl apply -f yml/configmap.yml
 #kubectl autoscale deploy storage -n storagerent --min=1 --max=10 --cpu-percent=15
 #kubectl get all -n storagerent
 #kubectl get deploy storage -w -n storagerent
+#./storage_readiness.sh v2
 
