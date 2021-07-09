@@ -544,7 +544,7 @@ Message이외  Sevices : h2db사용( AWS RDS도 연동은 하였으나, Mysql Po
 - 창고, 결제 서비스를 호출하기 위하여 Stub과 (FeignClient) 를 이용하여 Service 대행 인터페이스 (Proxy) 를 구현 
 
 ```
-# PaymentService.java
+### PaymentService.java
 
 package storagerent.external;
 
@@ -556,7 +556,7 @@ public interface PaymentService {
     public void approvePayment(@RequestBody Payment payment);
 }
 
-# StorageService.java
+### StorageService.java
 
 package storagerent.external;
 
@@ -573,7 +573,7 @@ public interface StorageService {
 
 - 예약 요청을 받은 직후(@PostPersist) 가능상태 확인 및 결제를 동기(Sync)로 요청하도록 처리
 ```
-# Reservation.java (Entity)
+### Reservation.java (Entity)
 
     @PostPersist
     public void onPostPersist(){
@@ -615,18 +615,18 @@ public interface StorageService {
 
 
 ```
-# 결제 (pay) 서비스를 잠시 내려놓음 (ctrl+c)
+### 결제 (pay) 서비스를 잠시 내려놓음
 
-# 대여창고 등록
+### 대여창고 등록
 http POST http://gateway:8080/storages description="storage1" price=200000 storageStatus="available"
 
-# Payment 서비스 종료 후 창고대여
+### Payment 서비스 종료 후 창고대여
 http POST http://gateway:8080/reservations storageId=1 price=200000 reservationStatus="reqReserve"
 
-# Payment 서비스 실행 후 창고대여
+### Payment 서비스 실행 후 창고대여
 http POST http://gateway:8080/reservations storageId=1 price=200000 reservationStatus="reqReserve"
 
-# 창고대여 확인 
+### 창고대여 확인 
 http GET http://gateway:8080/reservations/1  
 ```
 
@@ -635,7 +635,7 @@ http GET http://gateway:8080/reservations/1
 
 
 
-## 비동기식 호출 / 시간적 디커플링 / 장애격리 / 최종 (Eventual) 일관성 테스트
+### 비동기식 호출 / 시간적 디커플링 / 장애격리 / 최종 (Eventual) 일관성 테스트
 
 
 결제가 이루어진 후에 숙소 시스템의 상태가 업데이트 되고, 예약 시스템의 상태가 업데이트 되며, 예약 및 취소 메시지가 전송되는 시스템과의 통신 행위는 비동기식으로 처리한다.
@@ -643,7 +643,7 @@ http GET http://gateway:8080/reservations/1
 - 이를 위하여 결제가 승인되면 결제가 승인 되었다는 이벤트를 카프카로 송출한다. (Publish)
  
 ```
-# Payment.java
+### Payment.java
 
 package storagerent;
 
@@ -675,7 +675,7 @@ public class Payment {
 - 예약 시스템에서는 결제 승인 이벤트에 대해서 이를 수신하여 자신의 정책을 처리하도록 PolicyHandler 를 구현한다:
 
 ```
-# Reservation.java
+### Reservation.java
 
 package storagerent;
 
@@ -705,15 +705,15 @@ package storagerent;
 그 외 메시지 서비스는 예약/결제와 완전히 분리되어있으며, 이벤트 수신에 따라 처리되기 때문에, 메시지 서비스가 유지보수로 인해 잠시 내려간 상태 라도 예약을 받는데 문제가 없다.
 
 ```
-# 메시지 서비스 (message) 를 잠시 내려놓음 (ctrl+c)
+### 메시지 서비스 (message) 를 잠시 내려놓음 (ctrl+c)
 
-# 대여창고 등록
+### 대여창고 등록
 http POST http://gateway:8080/storages description="msg1" price=200000 storageStatus="available"
 
-# Message 서비스 종료 후 창고대여
+### Message 서비스 종료 후 창고대여
 http POST http://gateway:8080/reservations storageId=5 price=200000 reservationStatus="reqReserve"   
 
-# Message 서비스와 상관없이 창고대여 성공여부 확인
+### Message 서비스와 상관없이 창고대여 성공여부 확인
 http GET http://gateway:8080/reservations/2
 
 
