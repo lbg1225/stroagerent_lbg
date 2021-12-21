@@ -57,12 +57,15 @@ ClassAddLine()
 
 InitParam()
 {
-   cat /dev/null > $FileTmp
+    cat /dev/null > $FileTmp
    
-   BigDecimal="F"
-   Date="F"
-   Time="F"
-   Timestamp="F"
+    BigDecimal="F"
+    Date="F"
+    Time="F"
+    Timestamp="F"
+
+	Builder=""
+	FirstCol=""
 }
    
 #-------------------------------------
@@ -82,18 +85,17 @@ TableProc()
 	Table=$Result
 	ClassName=$Table'Entity'
 	FileName=$BaseDir/$ClassName.java
+	
+	cat /dev/null > $FileName
+	cat /dev/null > $BuilderTmp
+	
           
 	# echo $ClassName
 	# echo $FileName
 }
 
 BaseClass()
-{
-    cat /dev/null > $FileName
-	cat /dev/null > $BuilderTmp
-	Builder=""
-	FirstCol=""
-		
+{	
     # ClassAddLine 'package com.weni.tmes.example.model;'
 	if [ $BigDecimal == "T" ] ; then ClassAddLine 'import java.math.BigDecimal;'; fi
     if [ $Date == "T" ]       ; then ClassAddLine 'import java.sql.Date;'       ; fi
