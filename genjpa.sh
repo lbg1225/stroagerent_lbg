@@ -71,16 +71,17 @@ setIdType()
 generationRepository() 
 {
    echo "package $Package.persistence;" | tee $Persistence
-
+   echo "" | tee -a $Persistence
    echo "import org.springframework.data.repository.PagingAndSortingRepository;" | tee -a $Persistence
    echo "import org.springframework.data.rest.core.annotation.RepositoryRestResource;" | tee -a $Persistence
+   echo "import $Package.model.$Class"'Entity;' | tee -a $Persistence
    echo "" | tee -a $Persistence
    
    Tolower $Class
    tmp="$Result"s
    
    echo "@RepositoryRestResource(collectionResourceRel=\"$tmp\", path=\"$tmp\")" | tee -a $Persistence
-   echo 'public interface '$Class'Repository extends PagingAndSortingReptmpository<'$Class", $IdType>{"  | tee -a $Persistence
+   echo 'public interface '$Class'Repository extends PagingAndSortingRepository<'$Class"Entity, $IdType>{"  | tee -a $Persistence
    echo  "}" | tee -a $Persistence
 }
 
