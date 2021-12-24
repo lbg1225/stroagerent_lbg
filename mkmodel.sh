@@ -103,18 +103,21 @@ BaseClass()
     if [ $Timestamp == "T" ]  ; then ClassAddLine 'import java.sql.Timestamp;'  ; fi
 	ClassAddLine 'import java.io.Serializable;'
 	ClassAddLine 'import javax.persistence.*;'
-    ClassAddLine 'import org.springframework.beans.BeanUtils;'
+    ClassAddLine '// import org.springframework.beans.BeanUtils;'
+    # ClassAddLine 'import lombok.Data;'
     ClassAddLine 'import lombok.AccessLevel;'
-    ClassAddLine 'import lombok.Builder;'
-    ClassAddLine 'import lombok.Data;'
-    ClassAddLine 'import lombok.EqualsAndHashCode;'
     ClassAddLine 'import lombok.Getter;'
     ClassAddLine 'import lombok.NoArgsConstructor;'
+    ClassAddLine 'import lombok.EqualsAndHashCode;'
+    ClassAddLine 'import lombok.ToString;'
+    ClassAddLine 'import lombok.Builder;'
     ClassAddLine ''
     ClassAddLine '@Entity'
-    ClassAddLine '@Getter'
     ClassAddLine "@Table(name=\"$Orgtable\")"
+    ClassAddLine '@Getter'
     ClassAddLine '@NoArgsConstructor(access = AccessLevel.PROTECTED) // AccessLevel.PUBLIC'
+    ClassAddLine '@EqualsAndHashCode // (of = {"email","name"}, callSuper = true, onParam = @__(@NonNull))'  
+	ClassAddLine '@ToString //(exclude = "password") // exclude 속성을 사용하면, 특정 필드를 toString() 결과에서 제외'
 	ClassAddLine "public class $ClassName implements Serializable {"
 }
 
