@@ -1,0 +1,202 @@
+* 테스트 방법
+
+1. kafka 초기화 : 카프카 Gabage를 삭제하고 zookeeper, kafka 실행 후 storagerent topic 생성 후 모니터링
+   cd \kafka_2.13-2.8.0\bin\windows
+   del /s /q \tmp\*
+   zookeeper-server-start.bat ../../config/zookeeper.properties
+   kafka-server-start.bat ../../config/server.properties
+   kafka-topics.bat --zookeeper localhost:2181 --topic storagerent --create --partitions 1 --replication-factor 1
+   kafka-console-consumer.bat --bootstrap-server http://localhost:9092 --topic storagerent --from-beginning
+   
+2. 프로그램 실행 : 각 프로젝트 디렉토리에서 빌드 및 프로그램 수행(gateway, message, payment, reservation, storage, viewpage)
+   mvn clean ; mvn compile ; mvn package ; mvn spring-boot:run
+   
+3. 정상시나리오 수행
+   a. 대여창고 등록 : http POST http://localhost:8088/storages description="storage1" price=200000 storageStatus="available"
+	  HTTP/1.1 201 Created
+	  Content-Type: application/json;charset=UTF-8
+	  Date: Sun, 20 Jun 2021 08:00:33 GMT
+	  Location: http://localhost:8082/storages/1
+	  transfer-encoding: chunked
+	  
+      {
+          "_links": {
+              "self": {
+              	"href": "http://localhost:8082/storages/1"
+              },
+              "storage": {
+              	"href": "http://localhost:8082/storages/1"
+              }
+          },
+          "description": "storage1",
+          "lastAction": null,
+          "price": 200000.0,
+          "reviewCnt": null,
+          "storageStatus": "available"
+      }
+   b. 창고대여 : http POST localhost:8088/reservations storageId=1 price=200000 reservationStatus="reqReserve"
+      HTTP/1.1 201
+      Date: Sun, 20 Jun 2021 08:02:57 GMT
+      Location: http://localhost:8083/reservations/1
+      Content-Type: application/json;charset=UTF-8
+      Transfer-Encoding: chunked
+  
+      {
+          "_links": {
+              "reservation": {
+                  "href": "http://localhost:8083/reservations/1"
+              },
+              "self": {
+                  "href": "http://localhost:8083/reservations/1"
+              }
+          },
+          "paymentId": null,
+          "price": 200000.0,
+          "reservationStatus": null,
+          "storageId": 1
+      }
+   c. 창고대여확인 : http GET http://localhost:8088/reservations/1
+
+4. 동기식 호출 Fail Back처리
+   a. 대여창고 등록 :  http POST http://localhost:8088/storages description="storage1" price=200000 storageStatus="available"
+      HTTP/1.1 201 Created
+      Content-Type: application/json;charset=UTF-8
+      Date: Sun, 20 Jun 2021 13:24:14 GMT
+      Location: http://localhost:8082/storages/4
+      transfer-encoding: chunked
+      
+      {
+          "_links": {
+              "self": {
+                  "href": "http://localhost:8082/storages/4"
+              },
+              "storage": {
+                  "href": "http://localhost:8082/storages/4"
+              }
+          },
+          "description": "storage1",
+          "lastAction": null,
+          "price": 200000.0,
+          "reviewCnt": null,
+          "storageStatus": "available"
+      }
+      
+      
+      
+   b. Payment 서비스 종료 후 창고대여: http POST localhost:8088/reservations storageId=4 price=200000 reservationStatus="reqReserve"
+      HTTP/1.1 500 Internal Server Error
+      Content-Length: 360
+      Content-Type: text/html
+      
+      <html><body><h1>Whitelabel Error Page</h1><p>This application has no configured error view, so you are seeing this as a fallback.</p><div id='created'>Sun Jun 20 22:25:17 KST 2021</div><div>There was an unexpected error (type=Internal Server Error, status=500).</div><div>Connection refused: no further information: localhost/127.0.0.1:8083</div></body></html>
+      
+      
+   c. Payment 서비스 실행 후 창고대여 : http POST localhost:8088/reservations storageId=4 price=200000 reservationStatus="reqReserve"
+      HTTP/1.1 201 Created
+      Content-Type: application/json;charset=UTF-8
+      Date: Sun, 20 Jun 2021 13:26:05 GMT
+      Location: http://localhost:8083/reservations/1
+      transfer-encoding: chunked
+      
+      {
+          "_links": {
+              "reservation": {
+                  "href": "http://localhost:8083/reservations/1"
+              },
+              "self": {
+                  "href": "http://localhost:8083/reservations/1"
+              }
+          },
+          "paymentId": null,
+          "price": 200000.0,
+          "reservationStatus": "reqReserve",
+          "storageId": 4
+      }
+   c. 창고대여확인 : http GET http://localhost:8088/reservations/4  
+      
+5. 비동기 호출 테스트
+   a. 대여창고 등록 : http POST http://localhost:8088/storages description="msg1" price=200000 storageStatus="available"
+      HTTP/1.1 201 Created
+      Content-Type: application/json;charset=UTF-8
+      Date: Sun, 20 Jun 2021 13:35:23 GMT
+      Location: http://localhost:8082/storages/5
+      transfer-encoding: chunked
+      
+      {
+          "_links": {
+              "self": {
+                  "href": "http://localhost:8082/storages/5"
+              },
+              "storage": {
+                  "href": "http://localhost:8082/storages/5"
+              }
+          },
+          "description": "msg1",
+          "lastAction": null,
+          "price": 200000.0,
+          "reviewCnt": null,
+          "storageStatus": "available"
+      }
+      
+      
+      
+   b. Message 서비스 종료 후 창고대여: http POST localhost:8088/reservations storageId=5 price=200000 reservationStatus="reqReserve"
+      HTTP/1.1 201 Created
+      Content-Type: application/json;charset=UTF-8
+      Date: Sun, 20 Jun 2021 13:36:11 GMT
+      Location: http://localhost:8083/reservations/2
+      transfer-encoding: chunked
+      
+      {
+          "_links": {
+              "reservation": {
+                  "href": "http://localhost:8083/reservations/2"
+              },
+              "self": {
+                  "href": "http://localhost:8083/reservations/2"
+              }
+          },
+          "paymentId": null,
+          "price": 200000.0,
+          "reservationStatus": "reqReserve",
+          "storageId": 5
+      }
+      
+      
+      
+   c. Message 서비스와 상관없이 창고대여 성공여부 확인: http GET http://localhost:8088/reservations/2
+      HTTP/1.1 200 OK
+      Content-Type: application/hal+json;charset=UTF-8
+      Date: Sun, 20 Jun 2021 13:36:59 GMT
+      transfer-encoding: chunked
+      
+      {
+          "_links": {
+              "reservation": {
+                  "href": "http://localhost:8083/reservations/2"
+              },
+              "self": {
+                  "href": "http://localhost:8083/reservations/2"
+              }
+          },
+          "paymentId": 4,
+          "price": 200000.0,
+          "reservationStatus": "reserved",
+          "storageId": 5
+      }
+6. 예약 및 취소
+   1. http POST http://localhost:8088/storages description="BigStorage" price=200000 storageStatus="available"
+   2. http POST localhost:8088/reservations storageId=1 price=200000 reservationStatus="reqReserve"
+   3. http GET http://localhost:8088/storages/1
+   4. http GET http://localhost:8088/reservations/1
+   5. http GET http://localhost:8088/payments/1
+   6. http GET http://localhost:8088/storageviews/1
+   7. http PATCH localhost:8088/reservations/1 storageId=1 price=200000 reservationStatus="reqCancel" 
+   8. http GET http://localhost:8088/storages/1
+   9. http GET http://localhost:8088/reservations/1
+  10. http GET http://localhost:8088/payments/1
+  11. http GET http://localhost:8088/storageviews/1  
+  12. http POST http://localhost:8088/storages description="SmallStorage" price=100000 storageStatus="available"
+  13. http POST localhost:8088/reservations storageId=2 price=100000 reservationStatus="reqReserve" 
+  14. http POST http://localhost:8088/storages description="FreeStorage" price=50000 storageStatus="available"
+  15. http GET http://localhost:8088/storageviews/1  
